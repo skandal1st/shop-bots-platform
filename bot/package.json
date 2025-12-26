@@ -1,0 +1,23 @@
+{
+  "name": "shop-bots-telegram",
+  "version": "1.0.0",
+  "description": "Telegram Bot модуль для Shop Bots Platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.64.0",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/node-telegram-bot-api": "^0.64.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
+

@@ -1,0 +1,30 @@
+{
+  "name": "shop-bots-platform",
+  "version": "1.0.0",
+  "description": "Платформа для создания Telegram-ботов интернет-магазинов",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "bot"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:bot\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:bot": "cd bot && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:bot",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:bot": "cd bot && npm run build",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../bot && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+
