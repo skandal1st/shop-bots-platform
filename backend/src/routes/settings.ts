@@ -302,3 +302,71 @@ settingsRoutes.put('/bots/:botId/templates/:key', async (req: AuthRequest, res, 
   }
 });
 
+// Get order statuses for bot
+settingsRoutes.get('/bots/:botId/statuses', async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.userId!;
+    const { botId } = req.params;
+
+    // Verify bot belongs to user
+    const bot = await prisma.bot.findFirst({
+      where: { id: botId, userId }
+    });
+
+    if (!bot) {
+      throw new AppError('Bot not found', 404);
+    }
+
+    const statuses = await prisma.orderStatus.findMany({
+      where: { botId },
+      orderBy: { order: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      data: statuses
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Create or update order status
+settingsRoutes.post('/bots/:botId/statuses', async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.userId!;
+    const { botId } = req.params;
+    const { name, color, order, notifyCustomer } = req.body;
+
+    if (!name) {
+      throw new AppError('Status name is required', 400);
+    }
+
+    // Verify bot belongs to user
+    const bot = await prisma.bot.findFirst({
+      where: { id: botId, userId }
+    });
+
+    if (!bot) {
+      throw new AppError('Bot not found', 404);
+    }
+
+    const status = await prisma.orderStatus.create({
+      data: {
+        botId,
+        name,
+        color: color || '#1890ff',
+        order: order || 0,
+        notifyCustomer: notifyCustomer !== undefined ? notifyCustomer : true
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+

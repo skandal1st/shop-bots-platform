@@ -22,13 +22,15 @@ model User {
 }
 
 model Bot {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  token     String   @unique
-  name      String?
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  token            String   @unique
+  name             String?
+  isActive         Boolean  @default(true) @map("is_active")
+  adminTelegramId  BigInt?  @map("admin_telegram_id")
+  welcomeMessage   String?  @map("welcome_message")
+  createdAt        DateTime @default(now()) @map("created_at")
+
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   categories        Category[]
   products          Product[]
@@ -238,14 +240,16 @@ model CartItem {
 }
 
 model Favorite {
-  customerId String   @id @map("customer_id")
-  productId  String   @id @map("product_id")
+  customerId String   @map("customer_id")
+  productId  String   @map("product_id")
+  botId      String   @map("bot_id")
   createdAt  DateTime @default(now()) @map("created_at")
-  
+
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  bot        Bot      @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  
+  bot        Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, productId])
   @@map("favorites")
 }
 
@@ -359,11 +363,12 @@ model SupportMessage {
 }
 
 model CustomerTag {
-  customerId String   @id @map("customer_id")
-  tag        String   @id
-  
+  customerId String   @map("customer_id")
+  tag        String
+
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  
+
+  @@id([customerId, tag])
   @@map("customer_tags")
 }
 

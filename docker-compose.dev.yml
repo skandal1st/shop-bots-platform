@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shop_bots_postgres_dev
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shopbots}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shopbots123}
+      POSTGRES_DB: ${POSTGRES_DB:-shop_bots}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - shop_bots_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: shop_bots_backend_dev
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    ports:
+      - "3001:3001"
+    networks:
+      - shop_bots_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: shop_bots_frontend_dev
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    networks:
+      - shop_bots_network
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+      target: development
+    container_name: shop_bots_bot_dev
+    env_file:
+      - ./bot/.env
+    depends_on:
+      - backend
+    volumes:
+      - ./bot:/app
+      - /app/node_modules
+    networks:
+      - shop_bots_network
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  shop_bots_network:
+    driver: bridge

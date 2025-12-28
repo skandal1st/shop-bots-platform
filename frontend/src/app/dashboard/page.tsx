@@ -39,14 +39,10 @@ export default function DashboardPage() {
 
   const loadStats = async () => {
     try {
-      // Загрузка статистики
-      // Это пример - нужно реализовать соответствующий API endpoint
-      setStats({
-        bots: 0,
-        orders: 0,
-        revenue: 0,
-        customers: 0
-      })
+      const response = await api.get('/stats/dashboard')
+      if (response.data.success) {
+        setStats(response.data.data)
+      }
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
@@ -119,15 +115,21 @@ export default function DashboardPage() {
         <Card style={{ marginTop: 24 }}>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Title level={4}>Быстрые действия</Title>
-            <Space>
-              <Button type="primary" onClick={() => router.push('/bots')}>
-                Управление ботами
+            <Space wrap>
+              <Button type="primary" size="large" onClick={() => router.push('/bots')}>
+                🤖 Управление ботами
               </Button>
-              <Button onClick={() => router.push('/products')}>
-                Товары
+              <Button size="large" onClick={() => router.push('/categories')}>
+                📂 Категории
               </Button>
-              <Button onClick={() => router.push('/orders')}>
-                Заказы
+              <Button size="large" onClick={() => router.push('/products')}>
+                📦 Товары
+              </Button>
+              <Button size="large" onClick={() => router.push('/orders')}>
+                🛒 Заказы
+              </Button>
+              <Button size="large" onClick={() => router.push('/customers')}>
+                👥 Клиенты
               </Button>
             </Space>
           </Space>

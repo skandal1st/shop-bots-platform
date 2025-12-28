@@ -20,13 +20,18 @@ botRoutes.get('/', async (req: AuthRequest, res, next) => {
         id: true,
         name: true,
         isActive: true,
+        adminTelegramId: true,
+        welcomeMessage: true,
         createdAt: true
       }
     });
 
     res.json({
       success: true,
-      data: bots
+      data: bots.map(bot => ({
+        ...bot,
+        adminTelegramId: bot.adminTelegramId?.toString()
+      }))
     });
   } catch (error) {
     next(error);
@@ -52,7 +57,10 @@ botRoutes.get('/:id', async (req: AuthRequest, res, next) => {
 
     res.json({
       success: true,
-      data: bot
+      data: {
+        ...bot,
+        adminTelegramId: bot.adminTelegramId?.toString()
+      }
     });
   } catch (error) {
     next(error);
@@ -89,6 +97,23 @@ botRoutes.post('/', async (req: AuthRequest, res, next) => {
         }
       });
 
+      // Create default order statuses
+      const defaultStatuses = [
+        { name: 'Новый', color: '#1890ff', order: 0, isDefault: true },
+        { name: 'Подтвержден', color: '#52c41a', order: 1, isDefault: false },
+        { name: 'В обработке', color: '#faad14', order: 2, isDefault: false },
+        { name: 'Отправлен', color: '#722ed1', order: 3, isDefault: false },
+        { name: 'Доставлен', color: '#52c41a', order: 4, isDefault: false },
+        { name: 'Отменен', color: '#ff4d4f', order: 5, isDefault: false }
+      ];
+
+      await prisma.orderStatus.createMany({
+        data: defaultStatuses.map(status => ({
+          ...status,
+          botId: bot.id
+        }))
+      });
+
       res.status(201).json({
         success: true,
         data: bot
@@ -109,7 +134,7 @@ botRoutes.put('/:id', async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { name, isActive } = req.body;
+    const { name, isActive, adminTelegramId, welcomeMessage } = req.body;
 
     const bot = await prisma.bot.findFirst({
       where: {
@@ -126,13 +151,18 @@ botRoutes.put('/:id', async (req: AuthRequest, res, next) => {
       where: { id },
       data: {
         ...(name !== undefined && { name }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { isActive }),
+        ...(adminTelegramId !== undefined && { adminTelegramId: adminTelegramId ? BigInt(adminTelegramId) : null }),
+        ...(welcomeMessage !== undefined && { welcomeMessage })
       }
     });
 
     res.json({
       success: true,
-      data: updated
+      data: {
+        ...updated,
+        adminTelegramId: updated.adminTelegramId?.toString()
+      }
     });
   } catch (error) {
     next(error);

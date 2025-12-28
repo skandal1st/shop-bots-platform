@@ -11,6 +11,10 @@ import { orderRoutes } from './routes/orders';
 import { customerRoutes } from './routes/customers';
 import { settingsRoutes } from './routes/settings';
 import { cartRoutes } from './routes/cart';
+import { uploadRoutes } from './routes/upload';
+import { botPublicRoutes } from './routes/bot-public';
+import { statsRoutes } from './routes/stats';
+import path from 'path';
 
 dotenv.config();
 
@@ -18,13 +22,36 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://telegram.org"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
+      connectSrc: ["'self'", process.env.PUBLIC_URL || "http://localhost:3001", "http://localhost:3001"],
+      frameAncestors: ["'self'", "https://web.telegram.org", "https://telegram.org"]
+    }
+  }
+}));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    process.env.PUBLIC_URL,
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGIN
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Static files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/miniapp', express.static(path.join(__dirname, '../../miniapp')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -35,6 +62,9 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/carts', cartRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/public', botPublicRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

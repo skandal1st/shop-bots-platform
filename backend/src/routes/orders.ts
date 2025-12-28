@@ -54,9 +54,18 @@ orderRoutes.get('/bots/:botId', async (req: AuthRequest, res, next) => {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Convert BigInt to string for JSON serialization
+    const ordersData = orders.map(order => ({
+      ...order,
+      customer: {
+        ...order.customer,
+        telegramId: order.customer.telegramId.toString()
+      }
+    }));
+
     res.json({
       success: true,
-      data: orders
+      data: ordersData
     });
   } catch (error) {
     next(error);
@@ -89,9 +98,22 @@ orderRoutes.get('/:id', async (req: AuthRequest, res, next) => {
       throw new AppError('Order not found', 404);
     }
 
+    // Convert BigInt to string for JSON serialization
+    const orderData = {
+      ...order,
+      customer: {
+        ...order.customer,
+        telegramId: order.customer.telegramId.toString()
+      },
+      bot: {
+        ...order.bot,
+        adminTelegramId: order.bot.adminTelegramId?.toString() || null
+      }
+    };
+
     res.json({
       success: true,
-      data: order
+      data: orderData
     });
   } catch (error) {
     next(error);
@@ -163,9 +185,18 @@ orderRoutes.put('/:id/status', async (req: AuthRequest, res, next) => {
       }
     });
 
+    // Convert BigInt to string for JSON serialization
+    const resultData = {
+      ...result,
+      customer: {
+        ...result!.customer,
+        telegramId: result!.customer.telegramId.toString()
+      }
+    };
+
     res.json({
       success: true,
-      data: result
+      data: resultData
     });
   } catch (error) {
     next(error);

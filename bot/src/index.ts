@@ -75,6 +75,12 @@ class ShopBot {
           await this.handleCartAction(chatId, data);
         } else if (data === 'checkout') {
           await this.startCheckout(chatId);
+        } else if (data.startsWith('payment_')) {
+          const paymentMethod = data === 'payment_cash' ? 'Наличные при получении' : 'Банковский перевод';
+          await this.completeCheckout(chatId, paymentMethod);
+        } else if (data.startsWith('support_reply_')) {
+          const ticketId = data.replace('support_reply_', '');
+          await this.startSupportReply(chatId, ticketId);
         }
       } catch (error) {
         console.error('Error handling callback:', error);
@@ -90,10 +96,44 @@ class ShopBot {
     // Text messages
     this.bot.on('message', async (msg) => {
       const chatId = msg.chat.id;
+      const text = msg.text || '';
       const state = this.userStates.get(chatId);
 
+      // Handle cancel command
+      if (text === '/cancel') {
+        this.userStates.delete(chatId);
+        await this.bot.sendMessage(chatId, 'Действие отменено');
+        return;
+      }
+
+      // Handle checkout flow
       if (state?.startsWith('checkout_')) {
-        await this.handleCheckoutStep(chatId, msg.text || '', state);
+        await this.handleCheckoutStep(chatId, text, state);
+        return;
+      }
+
+      // Handle support messages from customer
+      if (state === 'support_waiting') {
+        await this.handleSupportMessage(chatId, text);
+        return;
+      }
+
+      // Handle support reply from admin
+      if (state?.startsWith('support_reply_')) {
+        const ticketId = state.replace('support_reply_', '');
+        await this.handleSupportReply(chatId, ticketId, text);
+        return;
+      }
+
+      // Handle menu button clicks
+      if (text.includes('Каталог') || text.includes('📂')) {
+        await this.showCatalog(chatId);
+      } else if (text.includes('Корзина') || text.includes('🛒')) {
+        await this.showCart(chatId);
+      } else if (text.includes('Мои заказы') || text.includes('📦')) {
+        await this.showOrders(chatId);
+      } else if (text.includes('Поддержка') || text.includes('💬')) {
+        await this.showSupport(chatId);
       }
     });
   }
@@ -101,17 +141,17 @@ class ShopBot {
   private async sendWelcomeMessage(chatId: number) {
     try {
       // Get welcome template from API
-      const response = await axios.get(`${this.config.apiUrl}/api/bots/${this.config.botId}/templates`, {
+      const response = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/templates`, {
         params: { key: 'welcome' }
       });
 
-      const welcomeText = response.data?.text || 'Добро пожаловать в наш магазин! 🛍️';
+      const welcomeText = response.data?.data?.text || 'Добро пожаловать в наш магазин! 🛍️';
 
       // Get menu buttons
-      const menuResponse = await axios.get(`${this.config.apiUrl}/api/bots/${this.config.botId}/menu`);
-      const menu = menuResponse.data?.buttons || [];
+      const menuResponse = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/menu`);
+      const menu = menuResponse.data?.data?.buttons || [];
 
-      const keyboard = this.buildMenuKeyboard(menu);
+      const keyboard = this.buildMenuKeyboard(menu, chatId);
 
       await this.bot.sendMessage(chatId, welcomeText, {
         reply_markup: {
@@ -125,32 +165,50 @@ class ShopBot {
     }
   }
 
-  private buildMenuKeyboard(menu: any[]) {
-    return menu.map(row => 
+  private buildMenuKeyboard(menu: any[], chatId?: number) {
+    const keyboard = menu.map(row =>
       row.map((button: any) => ({
         text: button.emoji ? `${button.emoji} ${button.text}` : button.text
       }))
     );
+
+    // Add Mini App button with user data
+    const miniAppUrl = chatId
+      ? `${this.config.apiUrl}/miniapp/index.html?botId=${this.config.botId}&userId=${chatId}`
+      : `${this.config.apiUrl}/miniapp/index.html?botId=${this.config.botId}`;
+
+    keyboard.push([{
+      text: '🛍️ Открыть каталог',
+      web_app: { url: miniAppUrl }
+    }]);
+
+    return keyboard;
   }
 
   private async showCatalog(chatId: number, categoryId?: string) {
     try {
-      const response = await axios.get(`${this.config.apiUrl}/api/bots/${this.config.botId}/categories`);
+      const response = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/categories`);
       const categories = response.data?.data || [];
 
-      if (categories.length === 0) {
-        await this.bot.sendMessage(chatId, 'Категории пока не добавлены');
-        return;
+      const keyboard: any[] = [];
+
+      // Add Mini App button first
+      keyboard.push([{
+        text: '🛍️ Открыть каталог в приложении',
+        web_app: { url: `${this.config.apiUrl}/miniapp/index.html?botId=${this.config.botId}&userId=${chatId}` }
+      }]);
+
+      if (categories.length > 0) {
+        // Add category buttons
+        categories.forEach((cat: any) => {
+          keyboard.push([{
+            text: cat.emoji ? `${cat.emoji} ${cat.name}` : cat.name,
+            callback_data: `category_${cat.id}`
+          }]);
+        });
       }
 
-      const keyboard = categories.map((cat: any) => [
-        {
-          text: cat.emoji ? `${cat.emoji} ${cat.name}` : cat.name,
-          callback_data: `category_${cat.id}`
-        }
-      ]);
-
-      await this.bot.sendMessage(chatId, 'Выберите категорию:', {
+      await this.bot.sendMessage(chatId, 'Выберите способ просмотра каталога:', {
         reply_markup: {
           inline_keyboard: keyboard
         }
@@ -163,7 +221,7 @@ class ShopBot {
 
   private async showCategory(chatId: number, categoryId: string) {
     try {
-      const response = await axios.get(`${this.config.apiUrl}/api/bots/${this.config.botId}/products`, {
+      const response = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/products`, {
         params: { categoryId }
       });
       const products = response.data?.data || [];
@@ -184,7 +242,7 @@ class ShopBot {
 
   private async showProduct(chatId: number, productId: string) {
     try {
-      const response = await axios.get(`${this.config.apiUrl}/api/products/${productId}`);
+      const response = await axios.get(`${this.config.apiUrl}/api/public/products/${productId}`);
       const product = response.data?.data;
 
       if (!product) {
@@ -228,7 +286,7 @@ class ShopBot {
       const customer = await this.getOrCreateCustomer(chatId);
 
       // Add to cart via API
-      await axios.post(`${this.config.apiUrl}/api/carts`, {
+      await axios.post(`${this.config.apiUrl}/api/public/carts`, {
         botId: this.config.botId,
         customerId: customer.id,
         productId,
@@ -245,8 +303,8 @@ class ShopBot {
   private async showCart(chatId: number) {
     try {
       const customer = await this.getOrCreateCustomer(chatId);
-      
-      const response = await axios.get(`${this.config.apiUrl}/api/carts/${customer.id}`);
+
+      const response = await axios.get(`${this.config.apiUrl}/api/public/carts/${customer.id}`);
       const cart = response.data?.data;
 
       if (!cart || cart.items.length === 0) {
@@ -265,12 +323,16 @@ class ShopBot {
 
       text += `\n💰 *Итого: ${total} ₽*`;
 
-      const keyboard = [[
-        {
+      const keyboard = [
+        [{
+          text: '🛍️ Открыть корзину в приложении',
+          web_app: { url: `${this.config.apiUrl}/miniapp/index.html?botId=${this.config.botId}&userId=${chatId}&openCart=true` }
+        }],
+        [{
           text: '✅ Оформить заказ',
           callback_data: 'checkout'
-        }
-      ]];
+        }]
+      ];
 
       await this.bot.sendMessage(chatId, text, {
         parse_mode: 'Markdown',
@@ -284,22 +346,199 @@ class ShopBot {
   }
 
   private async startCheckout(chatId: number) {
-    this.userStates.set(chatId, 'checkout_address');
-    await this.bot.sendMessage(chatId, 'Введите адрес доставки:');
+    try {
+      // Check if cart is not empty
+      const customer = await this.getOrCreateCustomer(chatId);
+      const response = await axios.get(`${this.config.apiUrl}/api/public/carts/${customer.id}`);
+      const cart = response.data?.data;
+
+      if (!cart || cart.items.length === 0) {
+        await this.bot.sendMessage(chatId, '🛒 Ваша корзина пуста');
+        return;
+      }
+
+      this.userStates.set(chatId, 'checkout_phone');
+      await this.bot.sendMessage(chatId, '📱 Введите ваш номер телефона:');
+    } catch (error) {
+      console.error('Error starting checkout:', error);
+      await this.bot.sendMessage(chatId, 'Ошибка при оформлении заказа');
+    }
   }
 
   private async handleCheckoutStep(chatId: number, text: string, state: string) {
-    // Implementation for checkout flow
-    // This is a simplified version
-    await this.bot.sendMessage(chatId, 'Заказ оформлен! Спасибо за покупку! 🎉');
-    this.userStates.delete(chatId);
+    try {
+      const customer = await this.getOrCreateCustomer(chatId);
+
+      if (state === 'checkout_phone') {
+        // Save phone and ask for address
+        this.userStates.set(chatId, `checkout_address:${text}`);
+        await this.bot.sendMessage(chatId, '📍 Введите адрес доставки:');
+      } else if (state.startsWith('checkout_address:')) {
+        const phone = state.split(':')[1];
+        this.userStates.set(chatId, `checkout_payment:${phone}:${text}`);
+
+        await this.bot.sendMessage(chatId, '💳 Выберите способ оплаты:', {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: 'Наличные при получении', callback_data: 'payment_cash' }],
+              [{ text: 'Банковский перевод', callback_data: 'payment_bank' }]
+            ]
+          }
+        });
+      } else if (state.startsWith('checkout_payment:')) {
+        // This will be handled in callback query
+      }
+    } catch (error) {
+      console.error('Error in checkout step:', error);
+      await this.bot.sendMessage(chatId, 'Ошибка при оформлении заказа');
+      this.userStates.delete(chatId);
+    }
+  }
+
+  private async completeCheckout(chatId: number, paymentMethod: string) {
+    try {
+      const state = this.userStates.get(chatId);
+      if (!state || !state.startsWith('checkout_payment:')) {
+        await this.bot.sendMessage(chatId, 'Ошибка: данные заказа не найдены');
+        return;
+      }
+
+      const [, phone, address] = state.split(':');
+      const customer = await this.getOrCreateCustomer(chatId);
+
+      // Update customer phone if provided
+      if (phone) {
+        try {
+          await axios.patch(
+            `${this.config.apiUrl}/api/customers/${customer.id}`,
+            { phone }
+          );
+        } catch (error) {
+          console.error('Error updating customer phone:', error);
+        }
+      }
+
+      // Get cart
+      const cartResponse = await axios.get(`${this.config.apiUrl}/api/public/carts/${customer.id}`);
+      const cart = cartResponse.data?.data;
+
+      if (!cart || cart.items.length === 0) {
+        await this.bot.sendMessage(chatId, '🛒 Ваша корзина пуста');
+        this.userStates.delete(chatId);
+        return;
+      }
+
+      // Prepare order items with full product data for admin notification
+      const itemsWithDetails = cart.items.map((item: any) => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        article: item.product.article,
+        price: parseFloat(item.product.price),
+        quantity: item.quantity,
+        imageUrl: item.product.images?.[0]?.url || null
+      }));
+
+      // Prepare items for order creation (simpler format)
+      const items = itemsWithDetails.map((item: any) => ({
+        productId: item.productId,
+        productName: item.productName,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrl: item.imageUrl
+      }));
+
+      // Create order
+      const orderResponse = await axios.post(
+        `${this.config.apiUrl}/api/public/orders/bots/${this.config.botId}`,
+        {
+          customerId: customer.id,
+          items,
+          paymentMethod,
+          deliveryAddress: address,
+          customerComment: null
+        }
+      );
+
+      const order = orderResponse.data?.data;
+
+      // Clear cart
+      await axios.delete(`${this.config.apiUrl}/api/public/carts/${customer.id}`);
+
+      // Send confirmation to customer
+      await this.bot.sendMessage(
+        chatId,
+        `✅ Заказ #${order.orderNumber} успешно оформлен!\n\n` +
+        `📦 Товаров: ${items.reduce((sum: number, item: any) => sum + item.quantity, 0)}\n` +
+        `💰 Сумма: ${order.total} ₽\n` +
+        `📍 Адрес: ${address}\n` +
+        `💳 Оплата: ${paymentMethod}\n\n` +
+        `Мы свяжемся с вами в ближайшее время!`
+      );
+
+      // Send notification to admin
+      await this.sendAdminNotification(order, customer, itemsWithDetails, phone, address, paymentMethod);
+
+      this.userStates.delete(chatId);
+    } catch (error: any) {
+      console.error('Error completing checkout:', error);
+      await this.bot.sendMessage(chatId, 'Ошибка при оформлении заказа: ' + (error.response?.data?.message || error.message));
+      this.userStates.delete(chatId);
+    }
+  }
+
+  private async sendAdminNotification(
+    order: any,
+    customer: any,
+    items: any[],
+    phone: string,
+    address: string,
+    paymentMethod: string
+  ) {
+    try {
+      // Get bot settings to retrieve adminTelegramId
+      const botResponse = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}`);
+      const bot = botResponse.data?.data;
+
+      if (!bot?.adminTelegramId) {
+        console.log('Admin Telegram ID not configured, skipping notification');
+        return;
+      }
+
+      // Format product list with name, article, and quantity
+      let productList = '';
+      for (const item of items) {
+        const article = item.article || 'N/A';
+        productList += `• ${item.productName} - ${article} - ${item.quantity} шт.\n`;
+      }
+
+      // Build admin notification message using HTML
+      const adminMessage =
+        `🔔 <b>Новый заказ #${order.orderNumber}</b>\n\n` +
+        `👤 <b>Покупатель:</b>\n` +
+        `<a href="tg://user?id=${customer.telegramId}">${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}</a>\n` +
+        `Username: ${customer.username ? '@' + customer.username : 'не указан'}\n\n` +
+        `📦 <b>Товары:</b>\n${productList}\n` +
+        `📍 <b>Адрес доставки:</b> ${address}\n` +
+        `📱 <b>Телефон:</b> ${phone}\n` +
+        `💳 <b>Способ оплаты:</b> ${paymentMethod}\n\n` +
+        `💰 <b>Итого:</b> ${order.total} ₽`;
+
+      // Send notification to admin
+      await this.bot.sendMessage(bot.adminTelegramId, adminMessage, {
+        parse_mode: 'HTML'
+      });
+
+      console.log(`Admin notification sent for order ${order.orderNumber}`);
+    } catch (error: any) {
+      console.error('Error sending admin notification:', error.response?.data || error.message);
+    }
   }
 
   private async showOrders(chatId: number) {
     try {
       const customer = await this.getOrCreateCustomer(chatId);
-      
-      const response = await axios.get(`${this.config.apiUrl}/api/bots/${this.config.botId}/orders`, {
+
+      const response = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/orders`, {
         params: { customerId: customer.id }
       });
       const orders = response.data?.data || [];
@@ -319,7 +558,155 @@ class ShopBot {
   }
 
   private async showSupport(chatId: number) {
-    await this.bot.sendMessage(chatId, '💬 Напишите ваш вопрос, и мы обязательно ответим!');
+    // Set user state to support mode
+    this.userStates.set(chatId, 'support_waiting');
+    await this.bot.sendMessage(
+      chatId,
+      '💬 Напишите ваш вопрос, и мы обязательно ответим!\n\n' +
+      'Для отмены отправьте /cancel'
+    );
+  }
+
+  private async handleSupportMessage(chatId: number, text: string) {
+    try {
+      // Get or create customer
+      const customer = await this.getOrCreateCustomer(chatId);
+
+      // Create support ticket
+      const ticketResponse = await axios.post(
+        `${this.config.apiUrl}/api/public/support/bots/${this.config.botId}`,
+        {
+          customerId: customer.id,
+          message: text
+        }
+      );
+
+      const ticket = ticketResponse.data?.data;
+
+      // Clear state
+      this.userStates.delete(chatId);
+
+      // Confirm to user
+      await this.bot.sendMessage(
+        chatId,
+        `✅ Ваше сообщение отправлено!\n\n` +
+        `Тикет #${ticket.id.slice(0, 8)}\n\n` +
+        `Мы ответим в ближайшее время.`
+      );
+
+      // Send notification to admin
+      await this.sendSupportNotificationToAdmin(ticket, customer, text);
+    } catch (error) {
+      console.error('Error handling support message:', error);
+      await this.bot.sendMessage(chatId, 'Ошибка отправки сообщения. Попробуйте позже.');
+      this.userStates.delete(chatId);
+    }
+  }
+
+  private async sendSupportNotificationToAdmin(ticket: any, customer: any, message: string) {
+    try {
+      // Get bot settings
+      const botResponse = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}`);
+      const bot = botResponse.data?.data;
+
+      if (!bot?.adminTelegramId) {
+        console.log('Admin Telegram ID not configured, skipping support notification');
+        return;
+      }
+
+      const adminMessage =
+        `💬 <b>Новое обращение в поддержку</b>\n\n` +
+        `<b>От:</b> <a href="tg://user?id=${customer.telegramId}">${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}</a>\n` +
+        `<b>Username:</b> ${customer.username ? '@' + customer.username : 'не указан'}\n` +
+        `<b>Тикет:</b> #${ticket.id.slice(0, 8)}\n\n` +
+        `<b>Сообщение:</b>\n${message}`;
+
+      await this.bot.sendMessage(bot.adminTelegramId, adminMessage, {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{
+              text: '✉️ Ответить',
+              callback_data: `support_reply_${ticket.id}`
+            }]
+          ]
+        }
+      });
+
+      console.log(`Support notification sent to admin for ticket ${ticket.id}`);
+    } catch (error: any) {
+      console.error('Error sending support notification:', error.response?.data || error.message);
+    }
+  }
+
+  private async startSupportReply(chatId: number, ticketId: string) {
+    try {
+      // Set state to wait for admin's reply
+      this.userStates.set(chatId, `support_reply_${ticketId}`);
+
+      await this.bot.sendMessage(
+        chatId,
+        '✍️ Введите ваш ответ для пользователя:\n\n' +
+        'Для отмены отправьте /cancel'
+      );
+    } catch (error) {
+      console.error('Error starting support reply:', error);
+      await this.bot.sendMessage(chatId, 'Ошибка. Попробуйте позже.');
+    }
+  }
+
+  private async handleSupportReply(chatId: number, ticketId: string, text: string) {
+    try {
+      // Get ticket details to find the customer
+      const ticketResponse = await axios.get(
+        `${this.config.apiUrl}/api/public/support/tickets/${ticketId}`
+      );
+      const ticket = ticketResponse.data?.data;
+
+      if (!ticket) {
+        await this.bot.sendMessage(chatId, 'Ошибка: тикет не найден');
+        this.userStates.delete(chatId);
+        return;
+      }
+
+      // Get admin info for saving the message
+      const adminChat = await this.bot.getChat(chatId);
+      const adminName = adminChat.first_name || 'Admin';
+
+      // Save admin message to database
+      await axios.post(
+        `${this.config.apiUrl}/api/public/support/tickets/${ticketId}/messages`,
+        {
+          senderType: 'admin',
+          senderId: chatId.toString(),
+          text: text
+        }
+      );
+
+      // Send reply to customer
+      await this.bot.sendMessage(
+        parseInt(ticket.customer.telegramId),
+        `💬 <b>Ответ от поддержки:</b>\n\n${text}`,
+        { parse_mode: 'HTML' }
+      );
+
+      // Confirm to admin
+      await this.bot.sendMessage(
+        chatId,
+        `✅ Ваш ответ отправлен пользователю!\n\n` +
+        `Тикет: #${ticketId.slice(0, 8)}`
+      );
+
+      // Clear state
+      this.userStates.delete(chatId);
+    } catch (error: any) {
+      console.error('Error handling support reply:', error);
+      await this.bot.sendMessage(
+        chatId,
+        'Ошибка при отправке ответа: ' + (error.response?.data?.message || error.message)
+      );
+      this.userStates.delete(chatId);
+    }
   }
 
   private async handleCartAction(chatId: number, data: string) {
@@ -327,16 +714,33 @@ class ShopBot {
   }
 
   private async getOrCreateCustomer(chatId: number) {
-    // Get or create customer via API
-    // This is a placeholder - implement based on your API
-    return { id: chatId.toString() };
+    try {
+      // Get chat info from Telegram
+      const chat = await this.bot.getChat(chatId);
+
+      // Get or create customer via API
+      const response = await axios.post(
+        `${this.config.apiUrl}/api/customers/bots/${this.config.botId}/telegram`,
+        {
+          telegramId: chatId,
+          username: chat.username || null,
+          firstName: chat.first_name || 'User',
+          lastName: chat.last_name || null
+        }
+      );
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting/creating customer:', error);
+      // Fallback for development
+      return { id: chatId.toString() };
+    }
   }
 }
 
 // Main execution
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const BOT_ID = process.env.BOT_ID;
-const API_URL = process.env.API_URL || 'http://localhost:3001';
 
 if (!BOT_TOKEN || !BOT_ID) {
   console.error('BOT_TOKEN and BOT_ID must be set in environment variables');
