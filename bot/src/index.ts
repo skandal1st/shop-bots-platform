@@ -738,20 +738,87 @@ class ShopBot {
   }
 }
 
-// Main execution
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const BOT_ID = process.env.BOT_ID;
+// Multi-bot manager
+class BotManager {
+  private bots: Map<string, ShopBot> = new Map();
+  private apiUrl: string;
 
-if (!BOT_TOKEN || !BOT_ID) {
-  console.error('BOT_TOKEN and BOT_ID must be set in environment variables');
-  process.exit(1);
+  constructor(apiUrl: string) {
+    this.apiUrl = apiUrl;
+  }
+
+  async loadBotsFromDatabase() {
+    try {
+      console.log('🔄 Loading bots from database...');
+      const response = await axios.get(`${this.apiUrl}/api/public/bots/active`);
+      const botsData = response.data;
+
+      console.log(`📋 Found ${botsData.length} active bots`);
+
+      for (const botData of botsData) {
+        if (!botData.token) {
+          console.warn(`⚠️  Bot ${botData.id} (${botData.name}) has no token, skipping`);
+          continue;
+        }
+
+        // Если бот уже запущен, пропускаем
+        if (this.bots.has(botData.id)) {
+          continue;
+        }
+
+        try {
+          console.log(`🚀 Starting bot: ${botData.name} (${botData.id})`);
+
+          const shopBot = new ShopBot({
+            token: botData.token,
+            botId: botData.id,
+            apiUrl: this.apiUrl
+          });
+
+          this.bots.set(botData.id, shopBot);
+          console.log(`✅ Bot ${botData.name} started successfully`);
+        } catch (error: any) {
+          console.error(`❌ Failed to start bot ${botData.name}:`, error.message);
+        }
+      }
+
+      console.log(`\n✅ Total active bots: ${this.bots.size}\n`);
+    } catch (error: any) {
+      console.error('❌ Error loading bots from database:', error.message);
+    }
+  }
+
+  async startPeriodicCheck() {
+    // Загружаем боты при старте
+    await this.loadBotsFromDatabase();
+
+    // Проверяем новые боты каждые 30 секунд
+    setInterval(async () => {
+      await this.loadBotsFromDatabase();
+    }, 30000);
+
+    console.log('🔄 Periodic bot check started (every 30 seconds)\n');
+  }
+
+  stopBot(botId: string) {
+    const bot = this.bots.get(botId);
+    if (bot) {
+      // Note: node-telegram-bot-api doesn't have explicit stop method
+      // The bot will be garbage collected
+      this.bots.delete(botId);
+      console.log(`🛑 Bot ${botId} stopped`);
+    }
+  }
 }
 
-const bot = new ShopBot({
-  token: BOT_TOKEN,
-  botId: BOT_ID,
-  apiUrl: API_URL
+// Main execution
+const manager = new BotManager(API_URL);
+
+manager.startPeriodicCheck().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
 });
 
-console.log('🤖 Telegram Bot started');
+console.log('🤖 Multi-Bot Manager started');
+console.log(`📡 API URL: ${API_URL}\n`);
 

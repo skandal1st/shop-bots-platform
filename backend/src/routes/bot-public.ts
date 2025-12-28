@@ -5,6 +5,25 @@ import axios from 'axios';
 
 export const botPublicRoutes = Router();
 
+// Get all active bots (for bot manager)
+botPublicRoutes.get('/bots/active', async (req, res, next) => {
+  try {
+    const bots = await prisma.bot.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+        token: true,
+        isActive: true
+      }
+    });
+
+    res.json(bots);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Helper function to escape HTML special characters
 function escapeHtml(text: string): string {
   return text
