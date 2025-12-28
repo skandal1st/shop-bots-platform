@@ -23,6 +23,15 @@ class ShopBot {
     this.setupHandlers();
   }
 
+  public stop() {
+    try {
+      this.bot.stopPolling();
+      console.log(`🛑 Bot ${this.config.botId} polling stopped`);
+    } catch (error) {
+      console.error(`Error stopping bot ${this.config.botId}:`, error);
+    }
+  }
+
   private setupHandlers() {
     // Start command
     this.bot.onText(/\/start/, async (msg) => {
@@ -753,8 +762,21 @@ class BotManager {
       const response = await axios.get(`${this.apiUrl}/api/public/bots/active`);
       const botsData = response.data;
 
-      console.log(`📋 Found ${botsData.length} active bots`);
+      console.log(`📋 Found ${botsData.length} active bots in database`);
 
+      // Получаем список ID активных ботов из базы
+      const activeBotIds = new Set(botsData.map((b: any) => b.id));
+
+      // Останавливаем боты, которых больше нет в базе
+      for (const [botId, bot] of this.bots.entries()) {
+        if (!activeBotIds.has(botId)) {
+          console.log(`🛑 Stopping bot ${botId} (removed from database)`);
+          bot.stop();
+          this.bots.delete(botId);
+        }
+      }
+
+      // Запускаем новые боты
       for (const botData of botsData) {
         if (!botData.token) {
           console.warn(`⚠️  Bot ${botData.id} (${botData.name}) has no token, skipping`);
@@ -803,10 +825,9 @@ class BotManager {
   stopBot(botId: string) {
     const bot = this.bots.get(botId);
     if (bot) {
-      // Note: node-telegram-bot-api doesn't have explicit stop method
-      // The bot will be garbage collected
+      bot.stop();
       this.bots.delete(botId);
-      console.log(`🛑 Bot ${botId} stopped`);
+      console.log(`🛑 Bot ${botId} stopped and removed`);
     }
   }
 }
