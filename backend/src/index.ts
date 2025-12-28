@@ -14,6 +14,10 @@ import { cartRoutes } from './routes/cart';
 import { uploadRoutes } from './routes/upload';
 import { botPublicRoutes } from './routes/bot-public';
 import { statsRoutes } from './routes/stats';
+import { subscriptionRoutes } from './routes/subscriptions';
+import { webhookRoutes } from './routes/webhooks';
+import { adminRoutes } from './routes/admin';
+import { startSubscriptionCron } from './utils/subscriptionCron';
 import path from 'path';
 
 dotenv.config();
@@ -43,7 +47,7 @@ app.use(cors({
     process.env.PUBLIC_URL,
     process.env.FRONTEND_URL,
     process.env.CORS_ORIGIN
-  ].filter(Boolean),
+  ].filter(Boolean) as string[],
   credentials: true
 }));
 app.use(express.json());
@@ -65,6 +69,9 @@ app.use('/api/carts', cartRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/public', botPublicRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -76,5 +83,8 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+
+  // Запускаем cron для проверки истекших подписок
+  startSubscriptionCron();
 });
 

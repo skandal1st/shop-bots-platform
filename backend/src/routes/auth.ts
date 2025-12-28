@@ -38,14 +38,33 @@ authRoutes.post('/register', async (req, res, next) => {
       }
     });
 
+    // Создаем Free подписку для нового пользователя
+    const freePlan = await prisma.subscriptionPlan.findUnique({
+      where: { name: 'free' }
+    });
+
+    if (freePlan) {
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 1); // 1 год
+
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planId: freePlan.id,
+          status: 'active',
+          startDate: new Date(),
+          endDate,
+          autoRenew: false
+        }
+      });
+    }
+
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error('JWT_SECRET is not configured');
     }
 
-    const token = jwt.sign({ userId: user.id }, secret, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-    });
+    const token = jwt.sign({ userId: user.id }, secret, { expiresIn: '7d' });
 
     res.status(201).json({
       success: true,
@@ -87,9 +106,7 @@ authRoutes.post('/login', async (req, res, next) => {
       throw new Error('JWT_SECRET is not configured');
     }
 
-    const token = jwt.sign({ userId: user.id }, secret, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-    });
+    const token = jwt.sign({ userId: user.id }, secret, { expiresIn: '7d' });
 
     res.json({
       success: true,
@@ -117,7 +134,19 @@ authRoutes.get('/me', authenticate, async (req, res, next) => {
       select: {
         id: true,
         email: true,
-        createdAt: true
+        role: true,
+        createdAt: true,
+        subscriptions: {
+          where: {
+            status: 'active',
+            endDate: { gte: new Date() }
+          },
+          include: {
+            plan: true
+          },
+          orderBy: { endDate: 'desc' },
+          take: 1
+        }
       }
     });
 
@@ -127,7 +156,17 @@ authRoutes.get('/me', authenticate, async (req, res, next) => {
 
     res.json({
       success: true,
-      data: user
+      data: {
+        ...user,
+        currentSubscription: user.subscriptions[0] ? {
+          ...user.subscriptions[0],
+          plan: {
+            ...user.subscriptions[0].plan,
+            price: Number(user.subscriptions[0].plan.price)
+          }
+        } : null,
+        subscriptions: undefined // Удаляем массив subscriptions из ответа
+      }
     });
   } catch (error) {
     next(error);

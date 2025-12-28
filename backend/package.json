@@ -11,7 +11,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
+    "@a2seven/yoo-checkout": "^1.1.4",
     "@prisma/client": "^5.7.1",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",

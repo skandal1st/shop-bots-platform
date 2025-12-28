@@ -14,10 +14,15 @@ model User {
   id            String   @id @default(uuid())
   email         String   @unique
   passwordHash  String   @map("password_hash")
+  role          String   @default("user") // user, superadmin
+  isBlocked     Boolean  @default(false) @map("is_blocked")
   createdAt     DateTime @default(now()) @map("created_at")
-  
+
   bots          Bot[]
-  
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  @@index([role])
   @@map("users")
 }
 
@@ -377,9 +382,66 @@ model AdminNote {
   customerId String   @map("customer_id")
   note       String
   createdAt  DateTime @default(now()) @map("created_at")
-  
+
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  
+
   @@map("admin_notes")
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  name        String   @unique // "free" или "premium"
+  displayName String   @map("display_name") // "Free" или "Premium"
+  price       Decimal  @db.Decimal(10, 2) // 0.00 для Free, например 990.00 для Premium
+  maxProducts Int      @map("max_products") // 10 для Free, -1 для безлимита
+  features    Json     @default("[]") // ["Базовый функционал", "Email поддержка"]
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  planId      String    @map("plan_id")
+  status      String    @default("active") // active, expired, cancelled, pending
+  startDate   DateTime  @default(now()) @map("start_date")
+  endDate     DateTime  @map("end_date")
+  autoRenew   Boolean   @default(false) @map("auto_renew")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  cancelledAt DateTime? @map("cancelled_at")
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  subscriptionId    String?   @map("subscription_id") // Может быть null для первоначальных платежей
+  amount            Decimal   @db.Decimal(10, 2)
+  status            String    @default("pending") // pending, succeeded, cancelled, failed
+  yookassaPaymentId String?   @unique @map("yookassa_payment_id")
+  yookassaData      Json?     @map("yookassa_data") // Полный ответ от ЮКассы
+  metadata          Json?     @default("{}") // Дополнительные данные
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([yookassaPaymentId])
+  @@map("payments")
 }
 

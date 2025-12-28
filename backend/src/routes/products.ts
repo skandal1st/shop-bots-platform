@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../utils/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { checkProductLimit } from '../middleware/checkSubscriptionLimits';
 import multer from 'multer';
 import XLSX from 'xlsx';
 
@@ -106,7 +107,7 @@ productRoutes.get('/:id', async (req: AuthRequest, res, next) => {
 });
 
 // Create product
-productRoutes.post('/bots/:botId', async (req: AuthRequest, res, next) => {
+productRoutes.post('/bots/:botId', checkProductLimit, async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
     const { botId } = req.params;
@@ -280,7 +281,7 @@ productRoutes.delete('/:id', async (req: AuthRequest, res, next) => {
 });
 
 // Bulk upload products from Excel file
-productRoutes.post('/bots/:botId/bulk-upload', upload.single('file'), async (req: AuthRequest, res, next) => {
+productRoutes.post('/bots/:botId/bulk-upload', upload.single('file'), checkProductLimit, async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
     const { botId } = req.params;

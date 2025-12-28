@@ -1,12 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
+import { prisma } from '../utils/prisma';
 
 export interface AuthRequest extends Request {
   userId?: string;
+  userRole?: string;
+  userEmail?: string;
 }
 
-export const authenticate = (
+export const authenticate = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -24,7 +27,24 @@ export const authenticate = (
     }
 
     const decoded = jwt.verify(token, secret) as { userId: string };
-    req.userId = decoded.userId;
+
+    // Получаем полную информацию о пользователе
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, role: true, email: true, isBlocked: true }
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (user.isBlocked) {
+      throw new AppError('Account is blocked', 403);
+    }
+
+    req.userId = user.id;
+    req.userRole = user.role;
+    req.userEmail = user.email;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -32,5 +52,17 @@ export const authenticate = (
     }
     next(error);
   }
+};
+
+// Middleware для проверки роли superadmin
+export const requireSuperAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.userRole !== 'superadmin') {
+    throw new AppError('Access denied. Superadmin role required.', 403);
+  }
+  next();
 };
 
