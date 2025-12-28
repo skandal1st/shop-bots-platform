@@ -61,6 +61,7 @@ interface Category {
 }
 
 export default function ProductsPage() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://skandata.ru'
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
@@ -144,7 +145,7 @@ export default function ProductsPage() {
       uid: `-${index}`,
       name: `image-${index}.jpg`,
       status: 'done',
-      url: `http://localhost:3001${img.url}`
+      url: `${API_URL}${img.url}`
     }))
     setFileList(existingFiles)
 
@@ -216,7 +217,7 @@ export default function ProductsPage() {
       const images = fileList
         .filter(file => file.status === 'done')
         .map((file, index) => ({
-          url: file.url?.replace('http://localhost:3001', '') || file.response?.data?.url || '',
+          url: file.url?.replace(API_URL, '') || file.response?.data?.url || '',
           order: index
         }))
         .filter(img => img.url)
@@ -251,7 +252,7 @@ export default function ProductsPage() {
 
   const uploadProps: UploadProps = {
     name: 'image',
-    action: 'http://localhost:3001/api/upload/image',
+    action: `${API_URL}/api/upload/image`,
     headers: {
       Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`
     },
