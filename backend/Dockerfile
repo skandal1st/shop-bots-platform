@@ -1,9 +1,9 @@
 # Backend Dockerfile
-FROM node:18-alpine AS base
+FROM node:18-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Copy package files
@@ -15,6 +15,7 @@ RUN npm install --omit=dev && npm cache clean --force
 
 # Development stage
 FROM base AS development
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -25,6 +26,7 @@ CMD ["npm", "run", "dev"]
 
 # Build stage
 FROM base AS builder
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -38,11 +40,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install OpenSSL 1.1 compatibility for Prisma
-RUN apk add --no-cache openssl1.1-compat
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 backend
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 backend
 
 # Copy necessary files
 COPY --from=deps /app/node_modules ./node_modules
