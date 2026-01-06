@@ -42,6 +42,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://skandata.ru}
     container_name: shop_bots_frontend
     env_file:
       - ./frontend/.env

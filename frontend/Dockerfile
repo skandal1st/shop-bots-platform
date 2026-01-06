@@ -29,6 +29,10 @@ RUN mkdir -p public
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Build-time environment variable for API URL
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 RUN npm run build
 
 # Production stage
