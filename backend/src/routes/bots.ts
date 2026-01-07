@@ -28,7 +28,7 @@ botRoutes.get('/', async (req: AuthRequest, res, next) => {
 
     res.json({
       success: true,
-      data: bots.map(bot => ({
+      data: bots.map((bot: any) => ({
         ...bot,
         adminTelegramId: bot.adminTelegramId?.toString()
       }))

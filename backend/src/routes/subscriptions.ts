@@ -26,7 +26,7 @@ subscriptionRoutes.get('/plans', async (req: AuthRequest, res, next) => {
 
     res.json({
       success: true,
-      data: plans.map(plan => ({
+      data: plans.map((plan: any) => ({
         ...plan,
         price: Number(plan.price)
       }))
@@ -65,7 +65,7 @@ subscriptionRoutes.get('/current', async (req: AuthRequest, res, next) => {
       select: { id: true }
     });
 
-    const botIds = bots.map(b => b.id);
+    const botIds = bots.map((b: any) => b.id);
     const productCount = await prisma.product.count({
       where: { botId: { in: botIds } }
     });
@@ -81,7 +81,7 @@ subscriptionRoutes.get('/current', async (req: AuthRequest, res, next) => {
             ...subscription.plan,
             price: Number(subscription.plan.price)
           },
-          payments: subscription.payments.map(p => ({
+          payments: subscription.payments.map((p: any) => ({
             ...p,
             amount: Number(p.amount)
           }))
@@ -206,7 +206,7 @@ subscriptionRoutes.get('/payments', async (req: AuthRequest, res, next) => {
 
     res.json({
       success: true,
-      data: payments.map(payment => ({
+      data: payments.map((payment: any) => ({
         ...payment,
         amount: Number(payment.amount),
         subscription: payment.subscription ? {

@@ -14,7 +14,7 @@ export async function checkExpiredSubscriptions() {
 
     // Обновляем статус на expired
     if (expiredSubscriptions.length > 0) {
-      const updatePromises = expiredSubscriptions.map(subscription =>
+      const updatePromises = expiredSubscriptions.map((subscription: any) =>
         prisma.subscription.update({
           where: { id: subscription.id },
           data: { status: 'expired' }

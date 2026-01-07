@@ -58,7 +58,9 @@ productRoutes.get('/bots/:botId', async (req: AuthRequest, res, next) => {
           include: {
             category: true
           }
-        }
+        },
+        digitalContent: true,
+        serviceDetails: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -89,6 +91,8 @@ productRoutes.get('/:id', async (req: AuthRequest, res, next) => {
             category: true
           }
         },
+        digitalContent: true,
+        serviceDetails: true,
         bot: true
       }
     });
@@ -111,7 +115,19 @@ productRoutes.post('/bots/:botId', checkProductLimit, async (req: AuthRequest, r
   try {
     const userId = req.userId!;
     const { botId } = req.params;
-    const { name, description, price, article, stockQuantity, unlimitedStock, categoryIds, images } = req.body;
+    const {
+      name,
+      description,
+      price,
+      article,
+      stockQuantity,
+      unlimitedStock,
+      categoryIds,
+      images,
+      productType,
+      digitalContent,
+      serviceDetails
+    } = req.body;
 
     if (!name || price === undefined) {
       throw new AppError('Name and price are required', 400);
@@ -135,6 +151,7 @@ productRoutes.post('/bots/:botId', checkProductLimit, async (req: AuthRequest, r
         article: article || null,
         stockQuantity: stockQuantity || 0,
         unlimitedStock: unlimitedStock || false,
+        productType: productType || 'PHYSICAL',
         categories: {
           create: (categoryIds || []).map((catId: string) => ({
             categoryId: catId
@@ -145,7 +162,32 @@ productRoutes.post('/bots/:botId', checkProductLimit, async (req: AuthRequest, r
             url: img.url,
             order: img.order !== undefined ? img.order : index
           }))
-        }
+        },
+        // Create digital content if product is digital
+        ...(productType === 'DIGITAL' && digitalContent && {
+          digitalContent: {
+            create: {
+              contentType: digitalContent.contentType || 'TEXT_KEY',
+              textKeys: digitalContent.textKeys || [],
+              fileUrl: digitalContent.fileUrl || null,
+              fileName: digitalContent.fileName || null,
+              fileSize: digitalContent.fileSize || null,
+              deliveryMethod: digitalContent.deliveryMethod || 'TELEGRAM',
+              autoDelivery: digitalContent.autoDelivery !== false,
+              maxDownloads: digitalContent.maxDownloads || null,
+              expiresInHours: digitalContent.expiresInHours || null
+            }
+          }
+        }),
+        // Create service details if product is service
+        ...(productType === 'SERVICE' && serviceDetails && {
+          serviceDetails: {
+            create: {
+              duration: serviceDetails.duration || null,
+              requiresBooking: serviceDetails.requiresBooking || false
+            }
+          }
+        })
       },
       include: {
         images: true,
@@ -153,7 +195,9 @@ productRoutes.post('/bots/:botId', checkProductLimit, async (req: AuthRequest, r
           include: {
             category: true
           }
-        }
+        },
+        digitalContent: true,
+        serviceDetails: true
       }
     });
 
@@ -171,11 +215,24 @@ productRoutes.put('/:id', async (req: AuthRequest, res, next) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { name, description, price, article, stockQuantity, unlimitedStock, isActive, categoryIds, images } = req.body;
+    const {
+      name,
+      description,
+      price,
+      article,
+      stockQuantity,
+      unlimitedStock,
+      isActive,
+      categoryIds,
+      images,
+      productType,
+      digitalContent,
+      serviceDetails
+    } = req.body;
 
     const product = await prisma.product.findUnique({
       where: { id },
-      include: { bot: true }
+      include: { bot: true, digitalContent: true, serviceDetails: true }
     });
 
     if (!product || product.bot.userId !== userId) {
@@ -192,7 +249,8 @@ productRoutes.put('/:id', async (req: AuthRequest, res, next) => {
         ...(article !== undefined && { article }),
         ...(stockQuantity !== undefined && { stockQuantity }),
         ...(unlimitedStock !== undefined && { unlimitedStock }),
-        ...(isActive !== undefined && { isActive })
+        ...(isActive !== undefined && { isActive }),
+        ...(productType !== undefined && { productType })
       }
     });
 
@@ -229,6 +287,80 @@ productRoutes.put('/:id', async (req: AuthRequest, res, next) => {
       }
     }
 
+    // Handle digital content
+    if (digitalContent !== undefined) {
+      if (productType === 'DIGITAL' || product.productType === 'DIGITAL') {
+        if (product.digitalContent) {
+          // Update existing
+          await prisma.digitalContent.update({
+            where: { productId: id },
+            data: {
+              contentType: digitalContent.contentType,
+              textKeys: digitalContent.textKeys || [],
+              fileUrl: digitalContent.fileUrl || null,
+              fileName: digitalContent.fileName || null,
+              fileSize: digitalContent.fileSize || null,
+              deliveryMethod: digitalContent.deliveryMethod || 'TELEGRAM',
+              autoDelivery: digitalContent.autoDelivery !== false,
+              maxDownloads: digitalContent.maxDownloads || null,
+              expiresInHours: digitalContent.expiresInHours || null
+            }
+          });
+        } else {
+          // Create new
+          await prisma.digitalContent.create({
+            data: {
+              productId: id,
+              contentType: digitalContent.contentType || 'TEXT_KEY',
+              textKeys: digitalContent.textKeys || [],
+              fileUrl: digitalContent.fileUrl || null,
+              fileName: digitalContent.fileName || null,
+              fileSize: digitalContent.fileSize || null,
+              deliveryMethod: digitalContent.deliveryMethod || 'TELEGRAM',
+              autoDelivery: digitalContent.autoDelivery !== false,
+              maxDownloads: digitalContent.maxDownloads || null,
+              expiresInHours: digitalContent.expiresInHours || null
+            }
+          });
+        }
+      } else if (product.digitalContent) {
+        // Delete if product type changed from DIGITAL
+        await prisma.digitalContent.delete({
+          where: { productId: id }
+        });
+      }
+    }
+
+    // Handle service details
+    if (serviceDetails !== undefined) {
+      if (productType === 'SERVICE' || product.productType === 'SERVICE') {
+        if (product.serviceDetails) {
+          // Update existing
+          await prisma.serviceDetails.update({
+            where: { productId: id },
+            data: {
+              duration: serviceDetails.duration || null,
+              requiresBooking: serviceDetails.requiresBooking || false
+            }
+          });
+        } else {
+          // Create new
+          await prisma.serviceDetails.create({
+            data: {
+              productId: id,
+              duration: serviceDetails.duration || null,
+              requiresBooking: serviceDetails.requiresBooking || false
+            }
+          });
+        }
+      } else if (product.serviceDetails) {
+        // Delete if product type changed from SERVICE
+        await prisma.serviceDetails.delete({
+          where: { productId: id }
+        });
+      }
+    }
+
     const result = await prisma.product.findUnique({
       where: { id },
       include: {
@@ -239,7 +371,9 @@ productRoutes.put('/:id', async (req: AuthRequest, res, next) => {
           include: {
             category: true
           }
-        }
+        },
+        digitalContent: true,
+        serviceDetails: true
       }
     });
 
@@ -342,7 +476,7 @@ productRoutes.post('/bots/:botId/bulk-upload', upload.single('file'), checkProdu
         // Find category by name if specified
         let categoryId: string | undefined;
         if (categoryName) {
-          const category = categories.find(c =>
+          const category = categories.find((c: any) =>
             c.name.toLowerCase() === categoryName.toString().toLowerCase()
           );
           if (!category) {

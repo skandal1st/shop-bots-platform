@@ -147,6 +147,15 @@ class ShopBot {
     });
   }
 
+  // Helper для преобразования относительных URL в абсолютные
+  private getFullImageUrl(url: string): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${this.config.apiUrl}${url}`;
+  }
+
   private async sendWelcomeMessage(chatId: number) {
     try {
       // Get welcome template from API
@@ -269,7 +278,8 @@ class ShopBot {
       ]];
 
       if (product.images && product.images.length > 0) {
-        await this.bot.sendPhoto(chatId, product.images[0].url, {
+        const imageUrl = this.getFullImageUrl(product.images[0].url);
+        await this.bot.sendPhoto(chatId, imageUrl, {
           caption: text,
           parse_mode: 'Markdown',
           reply_markup: {

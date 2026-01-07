@@ -55,7 +55,7 @@ orderRoutes.get('/bots/:botId', async (req: AuthRequest, res, next) => {
     });
 
     // Convert BigInt to string for JSON serialization
-    const ordersData = orders.map(order => ({
+    const ordersData = orders.map((order: any) => ({
       ...order,
       customer: {
         ...order.customer,

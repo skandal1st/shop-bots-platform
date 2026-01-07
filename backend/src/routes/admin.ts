@@ -69,9 +69,9 @@ adminRoutes.get('/users', async (req: AuthRequest, res, next) => {
     res.json({
       success: true,
       data: {
-        users: users.map(user => ({
+        users: users.map((user: any) => ({
           ...user,
-          subscriptions: user.subscriptions.map(sub => ({
+          subscriptions: user.subscriptions.map((sub: any) => ({
             ...sub,
             plan: {
               ...sub.plan,
@@ -133,18 +133,18 @@ adminRoutes.get('/users/:id', async (req: AuthRequest, res, next) => {
       success: true,
       data: {
         ...user,
-        subscriptions: user.subscriptions.map(sub => ({
+        subscriptions: user.subscriptions.map((sub: any) => ({
           ...sub,
           plan: {
             ...sub.plan,
             price: Number(sub.plan.price)
           },
-          payments: sub.payments.map(p => ({
+          payments: sub.payments.map((p: any) => ({
             ...p,
             amount: Number(p.amount)
           }))
         })),
-        payments: user.payments.map(p => ({
+        payments: user.payments.map((p: any) => ({
           ...p,
           amount: Number(p.amount)
         }))
@@ -378,8 +378,8 @@ adminRoutes.get('/stats', async (req: AuthRequest, res, next) => {
     });
 
     const planDetails = await prisma.subscriptionPlan.findMany();
-    const subscriptionStats = subscriptionsByPlan.map(sub => {
-      const plan = planDetails.find(p => p.id === sub.planId);
+    const subscriptionStats = subscriptionsByPlan.map((sub: any) => {
+      const plan = planDetails.find((p: any) => p.id === sub.planId);
       return {
         planName: plan?.displayName || 'Unknown',
         count: sub._count

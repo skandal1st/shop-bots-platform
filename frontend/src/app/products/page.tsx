@@ -45,9 +45,41 @@ interface Product {
   stockQuantity: number
   unlimitedStock: boolean
   isActive: boolean
+  productType: 'PHYSICAL' | 'DIGITAL' | 'SERVICE'
   images: Array<{ id: string; url: string; order: number }>
   categories: Array<{ category: { id: string; name: string } }>
+  digitalContent?: {
+    contentType: 'TEXT_KEY' | 'FILE'
+    textKeys: string[]
+    fileUrl: string | null
+    fileName: string | null
+    deliveryMethod: 'TELEGRAM' | 'DOWNLOAD' | 'MINIAPP'
+    autoDelivery: boolean
+    maxDownloads: number | null
+    expiresInHours: number | null
+  }
+  serviceDetails?: {
+    duration: number | null
+    requiresBooking: boolean
+  }
 }
+
+const productTypeOptions = [
+  { value: 'PHYSICAL', label: 'Физический товар' },
+  { value: 'DIGITAL', label: 'Цифровой товар' },
+  { value: 'SERVICE', label: 'Услуга' }
+]
+
+const contentTypeOptions = [
+  { value: 'TEXT_KEY', label: 'Текстовые ключи/коды' },
+  { value: 'FILE', label: 'Файл для скачивания' }
+]
+
+const deliveryMethodOptions = [
+  { value: 'TELEGRAM', label: 'Отправка в Telegram' },
+  { value: 'DOWNLOAD', label: 'Ссылка для скачивания' },
+  { value: 'MINIAPP', label: 'Раздел "Мои покупки"' }
+]
 
 interface Bot {
   id: string
@@ -133,7 +165,15 @@ export default function ProductsPage() {
     setEditingProduct(null)
     form.resetFields()
     setFileList([])
-    form.setFieldsValue({ isActive: true, unlimitedStock: false, stockQuantity: 0 })
+    form.setFieldsValue({
+      isActive: true,
+      unlimitedStock: false,
+      stockQuantity: 0,
+      productType: 'PHYSICAL',
+      contentType: 'TEXT_KEY',
+      deliveryMethod: 'TELEGRAM',
+      autoDelivery: true
+    })
     setIsModalOpen(true)
   }
 
@@ -157,7 +197,19 @@ export default function ProductsPage() {
       stockQuantity: product.stockQuantity,
       unlimitedStock: product.unlimitedStock,
       isActive: product.isActive,
-      categoryIds: product.categories.map(c => c.category.id)
+      categoryIds: product.categories.map(c => c.category.id),
+      productType: product.productType || 'PHYSICAL',
+      // Digital content fields
+      contentType: product.digitalContent?.contentType || 'TEXT_KEY',
+      textKeys: product.digitalContent?.textKeys?.join('\n') || '',
+      fileUrl: product.digitalContent?.fileUrl || '',
+      deliveryMethod: product.digitalContent?.deliveryMethod || 'TELEGRAM',
+      autoDelivery: product.digitalContent?.autoDelivery !== false,
+      maxDownloads: product.digitalContent?.maxDownloads || null,
+      expiresInHours: product.digitalContent?.expiresInHours || null,
+      // Service fields
+      duration: product.serviceDetails?.duration || null,
+      requiresBooking: product.serviceDetails?.requiresBooking || false
     })
     setIsModalOpen(true)
   }
@@ -222,7 +274,7 @@ export default function ProductsPage() {
         }))
         .filter(img => img.url)
 
-      const data = {
+      const data: any = {
         name: values.name,
         description: values.description || '',
         price: values.price,
@@ -231,7 +283,34 @@ export default function ProductsPage() {
         unlimitedStock: values.unlimitedStock || false,
         isActive: values.isActive,
         categoryIds: values.categoryIds || [],
-        images
+        images,
+        productType: values.productType || 'PHYSICAL'
+      }
+
+      // Add digital content for DIGITAL products
+      if (values.productType === 'DIGITAL') {
+        const textKeysArray = values.textKeys
+          ? values.textKeys.split('\n').map((k: string) => k.trim()).filter((k: string) => k)
+          : []
+
+        data.digitalContent = {
+          contentType: values.contentType || 'TEXT_KEY',
+          textKeys: textKeysArray,
+          fileUrl: values.fileUrl || null,
+          fileName: values.fileUrl ? values.fileUrl.split('/').pop() : null,
+          deliveryMethod: values.deliveryMethod || 'TELEGRAM',
+          autoDelivery: values.autoDelivery !== false,
+          maxDownloads: values.maxDownloads || null,
+          expiresInHours: values.expiresInHours || null
+        }
+      }
+
+      // Add service details for SERVICE products
+      if (values.productType === 'SERVICE') {
+        data.serviceDetails = {
+          duration: values.duration || null,
+          requiresBooking: values.requiresBooking || false
+        }
       }
 
       if (editingProduct) {
@@ -270,7 +349,7 @@ export default function ProductsPage() {
           reader.onload = () => resolve(reader.result as string)
         })
       }
-      const image = new Image()
+      const image = document.createElement('img')
       image.src = src
       const imgWindow = window.open(src)
       imgWindow?.document.write(image.outerHTML)
@@ -318,6 +397,25 @@ export default function ProductsPage() {
           {record.article && <span style={{ fontSize: 12, color: '#888' }}>Артикул: {record.article}</span>}
         </Space>
       )
+    },
+    {
+      title: 'Тип',
+      dataIndex: 'productType',
+      key: 'productType',
+      width: 100,
+      render: (type: string) => {
+        const colors: Record<string, string> = {
+          PHYSICAL: 'blue',
+          DIGITAL: 'purple',
+          SERVICE: 'cyan'
+        }
+        const labels: Record<string, string> = {
+          PHYSICAL: 'Товар',
+          DIGITAL: 'Цифровой',
+          SERVICE: 'Услуга'
+        }
+        return <Tag color={colors[type] || 'default'}>{labels[type] || type}</Tag>
+      }
     },
     {
       title: 'Цена',
@@ -514,8 +612,130 @@ export default function ProductsPage() {
             </Form.Item>
 
             <Form.Item
+              label="Тип товара"
+              name="productType"
+              rules={[{ required: true }]}
+            >
+              <Select options={productTypeOptions} />
+            </Form.Item>
+
+            {/* Digital product fields */}
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => prevValues.productType !== currentValues.productType}
+            >
+              {({ getFieldValue }) =>
+                getFieldValue('productType') === 'DIGITAL' ? (
+                  <Card size="small" title="Настройки цифрового товара" style={{ marginBottom: 16 }}>
+                    <Form.Item
+                      label="Тип контента"
+                      name="contentType"
+                      rules={[{ required: true, message: 'Выберите тип контента' }]}
+                    >
+                      <Select options={contentTypeOptions} />
+                    </Form.Item>
+
+                    <Form.Item
+                      noStyle
+                      shouldUpdate={(prevValues, currentValues) => prevValues.contentType !== currentValues.contentType}
+                    >
+                      {({ getFieldValue: getValue }) =>
+                        getValue('contentType') === 'TEXT_KEY' ? (
+                          <Form.Item
+                            label="Ключи/коды"
+                            name="textKeys"
+                            extra="Каждый ключ на новой строке. Ключи выдаются по порядку."
+                          >
+                            <TextArea
+                              rows={5}
+                              placeholder="KEY-001-XXX&#10;KEY-002-XXX&#10;KEY-003-XXX"
+                            />
+                          </Form.Item>
+                        ) : (
+                          <Form.Item
+                            label="URL файла"
+                            name="fileUrl"
+                            extra="Прямая ссылка на файл для скачивания"
+                          >
+                            <Input placeholder="https://example.com/file.zip" />
+                          </Form.Item>
+                        )
+                      }
+                    </Form.Item>
+
+                    <Form.Item
+                      label="Способ доставки"
+                      name="deliveryMethod"
+                    >
+                      <Select options={deliveryMethodOptions} />
+                    </Form.Item>
+
+                    <Form.Item
+                      label="Автоматическая доставка"
+                      name="autoDelivery"
+                      valuePropName="checked"
+                      extra="Контент будет отправлен сразу после оплаты"
+                    >
+                      <Switch checkedChildren="Да" unCheckedChildren="Нет" />
+                    </Form.Item>
+
+                    <Space style={{ width: '100%' }} size="large">
+                      <Form.Item
+                        label="Макс. скачиваний"
+                        name="maxDownloads"
+                        style={{ width: 200 }}
+                        extra="Пусто = без ограничений"
+                      >
+                        <InputNumber min={1} style={{ width: '100%' }} placeholder="∞" />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="Срок действия (часов)"
+                        name="expiresInHours"
+                        style={{ width: 200 }}
+                        extra="Пусто = бессрочно"
+                      >
+                        <InputNumber min={1} style={{ width: '100%' }} placeholder="∞" />
+                      </Form.Item>
+                    </Space>
+                  </Card>
+                ) : null
+              }
+            </Form.Item>
+
+            {/* Service fields */}
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => prevValues.productType !== currentValues.productType}
+            >
+              {({ getFieldValue }) =>
+                getFieldValue('productType') === 'SERVICE' ? (
+                  <Card size="small" title="Настройки услуги" style={{ marginBottom: 16 }}>
+                    <Form.Item
+                      label="Длительность (минут)"
+                      name="duration"
+                      extra="Примерная длительность оказания услуги"
+                    >
+                      <InputNumber min={1} style={{ width: '100%' }} placeholder="60" />
+                    </Form.Item>
+
+                    <Form.Item
+                      label="Требуется бронирование"
+                      name="requiresBooking"
+                      valuePropName="checked"
+                      extra="Клиент должен выбрать дату/время"
+                    >
+                      <Switch checkedChildren="Да" unCheckedChildren="Нет" />
+                    </Form.Item>
+                  </Card>
+                ) : null
+              }
+            </Form.Item>
+
+            <Form.Item
               label="Описание"
               name="description"
+              extra="Поддерживается форматирование: **жирный**, *курсив*, - списки"
             >
               <TextArea rows={4} placeholder="Подробное описание товара" />
             </Form.Item>

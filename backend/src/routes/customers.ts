@@ -145,13 +145,13 @@ customerRoutes.get('/bots/:botId', async (req: AuthRequest, res, next) => {
 
     // Calculate total spent for each customer
     const customersWithStats = await Promise.all(
-      customers.map(async (customer) => {
+      customers.map(async (customer: any) => {
         const orders = await prisma.order.findMany({
           where: { customerId: customer.id },
           select: { total: true }
         });
 
-        const totalSpent = orders.reduce((sum, order) => sum + Number(order.total), 0);
+        const totalSpent = orders.reduce((sum: any, order: any) => sum + Number(order.total), 0);
 
         return {
           ...customer,
@@ -201,7 +201,7 @@ customerRoutes.get('/:id', async (req: AuthRequest, res, next) => {
     }
 
     // Calculate stats
-    const totalSpent = customer.orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const totalSpent = customer.orders.reduce((sum: any, order: any) => sum + Number(order.total), 0);
     const avgOrderValue = customer.orders.length > 0 ? totalSpent / customer.orders.length : 0;
 
     // Convert BigInt to string for JSON serialization

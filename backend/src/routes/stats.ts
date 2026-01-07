@@ -18,7 +18,7 @@ statsRoutes.get('/dashboard', async (req: AuthRequest, res, next) => {
       select: { id: true }
     });
 
-    const botIds = bots.map(bot => bot.id);
+    const botIds = bots.map((bot: any) => bot.id);
 
     // Count total bots
     const botsCount = botIds.length;
@@ -40,7 +40,7 @@ statsRoutes.get('/dashboard', async (req: AuthRequest, res, next) => {
       }
     });
 
-    const revenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+    const revenue = orders.reduce((sum: any, order: any) => sum + Number(order.total), 0);
 
     // Count unique customers across all bots
     const customersCount = await prisma.customer.count({

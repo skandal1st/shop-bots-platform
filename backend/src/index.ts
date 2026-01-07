@@ -17,6 +17,8 @@ import { statsRoutes } from './routes/stats';
 import { subscriptionRoutes } from './routes/subscriptions';
 import { webhookRoutes } from './routes/webhooks';
 import { adminRoutes } from './routes/admin';
+import { broadcastRoutes } from './routes/broadcasts';
+import { digitalRoutes } from './routes/digital';
 import { startSubscriptionCron } from './utils/subscriptionCron';
 import path from 'path';
 
@@ -72,6 +74,8 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/broadcasts', broadcastRoutes);
+app.use('/api/digital', digitalRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

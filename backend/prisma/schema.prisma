@@ -73,27 +73,95 @@ model Category {
   @@map("categories")
 }
 
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SERVICE
+}
+
+enum ContentType {
+  TEXT_KEY
+  FILE
+}
+
+enum DeliveryMethod {
+  TELEGRAM
+  DOWNLOAD
+  MINIAPP
+}
+
 model Product {
-  id             String    @id @default(uuid())
-  botId          String    @map("bot_id")
+  id             String      @id @default(uuid())
+  botId          String      @map("bot_id")
   name           String
-  description    String    @default("")
-  price          Decimal   @db.Decimal(10, 2)
+  description    String      @default("")
+  price          Decimal     @db.Decimal(10, 2)
   article        String?
-  stockQuantity  Int       @default(0) @map("stock_quantity")
-  unlimitedStock Boolean   @default(false) @map("unlimited_stock")
-  isActive       Boolean   @default(true) @map("is_active")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  
-  bot            Bot              @relation(fields: [botId], references: [id], onDelete: Cascade)
-  images         ProductImage[]
-  categories     ProductCategory[]
-  orderItems     OrderItem[]
-  cartItems      CartItem[]
-  favorites      Favorite[]
-  
+  stockQuantity  Int         @default(0) @map("stock_quantity")
+  unlimitedStock Boolean     @default(false) @map("unlimited_stock")
+  isActive       Boolean     @default(true) @map("is_active")
+  productType    ProductType @default(PHYSICAL) @map("product_type")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  bot              Bot              @relation(fields: [botId], references: [id], onDelete: Cascade)
+  images           ProductImage[]
+  categories       ProductCategory[]
+  orderItems       OrderItem[]
+  cartItems        CartItem[]
+  favorites        Favorite[]
+  digitalContent   DigitalContent?
+  serviceDetails   ServiceDetails?
+  digitalPurchases DigitalPurchase[]
+
   @@map("products")
+}
+
+model DigitalContent {
+  id              String         @id @default(uuid())
+  productId       String         @unique @map("product_id")
+  contentType     ContentType    @map("content_type")
+  textKeys        Json           @default("[]") @map("text_keys")
+  fileUrl         String?        @map("file_url")
+  fileName        String?        @map("file_name")
+  fileSize        Int?           @map("file_size")
+  deliveryMethod  DeliveryMethod @default(TELEGRAM) @map("delivery_method")
+  autoDelivery    Boolean        @default(true) @map("auto_delivery")
+  maxDownloads    Int?           @map("max_downloads")
+  expiresInHours  Int?           @map("expires_in_hours")
+
+  product         Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("digital_content")
+}
+
+model ServiceDetails {
+  id              String   @id @default(uuid())
+  productId       String   @unique @map("product_id")
+  duration        Int?
+  requiresBooking Boolean  @default(false) @map("requires_booking")
+
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("service_details")
+}
+
+model DigitalPurchase {
+  id              String    @id @default(uuid())
+  orderId         String    @map("order_id")
+  productId       String    @map("product_id")
+  customerId      String    @map("customer_id")
+  deliveredKey    String?   @map("delivered_key")
+  downloadUrl     String?   @map("download_url")
+  downloadCount   Int       @default(0) @map("download_count")
+  expiresAt       DateTime? @map("expires_at")
+  deliveredAt     DateTime? @map("delivered_at")
+
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
+  customer        Customer  @relation(fields: [customerId], references: [id])
+
+  @@map("digital_purchases")
 }
 
 model ProductImage {
@@ -129,15 +197,16 @@ model Customer {
   createdAt   DateTime  @default(now()) @map("created_at")
   lastOrderAt DateTime? @map("last_order_at")
   
-  bot         Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
-  addresses   Address[]
-  orders      Order[]
-  cart        Cart?
-  favorites   Favorite[]
-  tags        CustomerTag[]
-  notes       AdminNote[]
-  supportTickets SupportTicket[]
-  
+  bot              Bot               @relation(fields: [botId], references: [id], onDelete: Cascade)
+  addresses        Address[]
+  orders           Order[]
+  cart             Cart?
+  favorites        Favorite[]
+  tags             CustomerTag[]
+  notes            AdminNote[]
+  supportTickets   SupportTicket[]
+  digitalPurchases DigitalPurchase[]
+
   @@map("customers")
 }
 
@@ -182,12 +251,13 @@ model Order {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   
-  bot           Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
-  customer      Customer       @relation(fields: [customerId], references: [id])
-  status        OrderStatus    @relation(fields: [statusId], references: [id])
-  items         OrderItem[]
-  statusHistory StatusHistory[]
-  
+  bot              Bot              @relation(fields: [botId], references: [id], onDelete: Cascade)
+  customer         Customer         @relation(fields: [customerId], references: [id])
+  status           OrderStatus      @relation(fields: [statusId], references: [id])
+  items            OrderItem[]
+  statusHistory    StatusHistory[]
+  digitalPurchases DigitalPurchase[]
+
   @@map("orders")
 }
 

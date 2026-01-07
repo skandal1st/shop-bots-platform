@@ -28,6 +28,20 @@ let categories = [];
 let products = [];
 let cart = [];
 let selectedCategory = 'all';
+let searchQuery = '';
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
 
 // DOM Elements
 const categoriesEl = document.getElementById('categories');
@@ -40,6 +54,8 @@ const productModal = document.getElementById('productModal');
 const cartModal = document.getElementById('cartModal');
 const checkoutModal = document.getElementById('checkoutModal');
 const checkoutForm = document.getElementById('checkoutForm');
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
 
 // Extract botId from Telegram init data
 function extractBotIdFromInitData() {
@@ -53,6 +69,29 @@ function extractBotIdFromInitData() {
     }
     // Fallback for development
     return '3948b4fa-eed4-46bc-a1ef-08fac5e4431a';
+}
+
+// Simple Markdown parser for product descriptions
+function parseMarkdown(text) {
+    if (!text) return '';
+    return text
+        // Escape HTML first
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        // Bold: **text** or __text__
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.+?)__/g, '<strong>$1</strong>')
+        // Italic: *text* or _text_
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/_(.+?)_/g, '<em>$1</em>')
+        // Line breaks
+        .replace(/\n/g, '<br>')
+        // Lists: - item or * item
+        .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
+        // Wrap consecutive <li> in <ul>
+        .replace(/(<li>.*<\/li>)(?=\s*<li>)/g, '$1')
+        .replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
 }
 
 // Helper to get full image URL
@@ -144,9 +183,20 @@ async function loadProducts() {
 function renderProducts() {
     productsEl.innerHTML = '';
 
-    const filteredProducts = selectedCategory === 'all'
+    // Filter by category
+    let filteredProducts = selectedCategory === 'all'
         ? products
         : products.filter(p => p.categories.some(c => c.categoryId === selectedCategory));
+
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredProducts = filteredProducts.filter(p =>
+            p.name.toLowerCase().includes(query) ||
+            (p.description && p.description.toLowerCase().includes(query)) ||
+            (p.article && p.article.toLowerCase().includes(query))
+        );
+    }
 
     if (filteredProducts.length === 0) {
         emptyEl.style.display = 'block';
@@ -185,7 +235,7 @@ function showProductDetails(product) {
         <img class="product-image" src="${imageUrl}" alt="${product.name}" onerror="this.src=''">
         <h2>${product.name}</h2>
         <div class="product-price">${parseFloat(product.price).toLocaleString('ru-RU')} ₽</div>
-        ${product.description ? `<div class="product-description">${product.description}</div>` : ''}
+        ${product.description ? `<div class="product-description">${parseMarkdown(product.description)}</div>` : ''}
         <button class="add-to-cart-btn" onclick="addToCart('${product.id}'); closeModal('productModal')">
             Добавить в корзину
         </button>
@@ -481,6 +531,24 @@ function closeModal(modalId) {
 cartBtn.onclick = showCart;
 document.getElementById('checkoutBtn').onclick = checkout;
 checkoutForm.onsubmit = handleCheckout;
+
+// Search handlers
+const handleSearch = debounce((value) => {
+    searchQuery = value.trim();
+    searchClear.style.display = searchQuery ? 'block' : 'none';
+    renderProducts();
+}, 300);
+
+searchInput.addEventListener('input', (e) => {
+    handleSearch(e.target.value);
+});
+
+searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchQuery = '';
+    searchClear.style.display = 'none';
+    renderProducts();
+});
 
 // Close modals when clicking outside
 [productModal, cartModal, checkoutModal].forEach(modal => {

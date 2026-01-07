@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Menu } from 'antd'
+import type { MenuProps } from 'antd'
 import {
   DashboardOutlined,
   RobotOutlined,
@@ -12,9 +13,12 @@ import {
   UserOutlined,
   BarChartOutlined,
   TagsOutlined,
-  ShoppingCartOutlined
+  ShoppingCartOutlined,
+  NotificationOutlined
 } from '@ant-design/icons'
 import api from '@/lib/api'
+
+type MenuItem = Required<MenuProps>['items'][number]
 
 export default function Navigation() {
   const router = useRouter()
@@ -37,7 +41,7 @@ export default function Navigation() {
     }
   }
 
-  const userItems = [
+  const userItems: MenuItem[] = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
@@ -69,6 +73,11 @@ export default function Navigation() {
       label: 'Клиенты'
     },
     {
+      key: '/broadcasts',
+      icon: <NotificationOutlined />,
+      label: 'Рассылки'
+    },
+    {
       key: '/subscription',
       icon: <CrownOutlined />,
       label: 'Подписка',
@@ -76,7 +85,7 @@ export default function Navigation() {
     }
   ]
 
-  const adminItems = [
+  const adminItems: MenuItem[] = [
     {
       key: 'admin-divider',
       type: 'divider'
@@ -84,17 +93,19 @@ export default function Navigation() {
     {
       key: 'admin-group',
       label: 'Администрирование',
-      type: 'group'
-    },
-    {
-      key: '/admin/stats',
-      icon: <BarChartOutlined />,
-      label: 'Статистика платформы'
-    },
-    {
-      key: '/admin/users',
-      icon: <UserOutlined />,
-      label: 'Пользователи'
+      type: 'group',
+      children: [
+        {
+          key: '/admin/stats',
+          icon: <BarChartOutlined />,
+          label: 'Статистика платформы'
+        },
+        {
+          key: '/admin/users',
+          icon: <UserOutlined />,
+          label: 'Пользователи'
+        }
+      ]
     }
   ]
 
