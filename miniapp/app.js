@@ -94,15 +94,24 @@ function parseMarkdown(text) {
         .replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
 }
 
+// Placeholder image as data URL (simple gray box with camera icon)
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect fill='%23f0f0f0' width='200' height='200'/%3E%3Cpath fill='%23ccc' d='M100 60c-22 0-40 18-40 40s18 40 40 40 40-18 40-40-18-40-40-40zm0 65c-14 0-25-11-25-25s11-25 25-25 25 11 25 25-11 25-25 25z'/%3E%3Ccircle fill='%23ccc' cx='130' cy='70' r='8'/%3E%3Cpath fill='%23ccc' d='M150 45h-20l-5-10H75l-5 10H50c-6 0-10 4-10 10v80c0 6 4 10 10 10h100c6 0 10-4 10-10V55c0-6-4-10-10-10z' opacity='0.3'/%3E%3C/svg%3E";
+
 // Helper to get full image URL
 function getImageUrl(url) {
-    if (!url) return '';
+    if (!url) return PLACEHOLDER_IMAGE;
     // If already full URL, return as is
     if (url.startsWith('http://') || url.startsWith('https://')) {
         return url;
     }
     // If relative path, prepend API_URL
     return `${API_URL}${url}`;
+}
+
+// Handle image load error
+function handleImageError(img) {
+    img.src = PLACEHOLDER_IMAGE;
+    img.onerror = null;
 }
 
 // Helper function for API calls
@@ -212,7 +221,7 @@ function renderProducts() {
         const imageUrl = getImageUrl(product.images?.[0]?.url);
 
         card.innerHTML = `
-            <img class="product-image" src="${imageUrl}" alt="${product.name}" onerror="this.src=''">
+            <img class="product-image" src="${imageUrl}" alt="${product.name}" onerror="handleImageError(this)">
             <div class="product-info">
                 <div class="product-name">${product.name}</div>
                 <div class="product-price">${parseFloat(product.price).toLocaleString('ru-RU')} ₽</div>
@@ -232,7 +241,7 @@ function showProductDetails(product) {
     const imageUrl = getImageUrl(product.images?.[0]?.url);
 
     document.getElementById('productDetails').innerHTML = `
-        <img class="product-image" src="${imageUrl}" alt="${product.name}" onerror="this.src=''">
+        <img class="product-image" src="${imageUrl}" alt="${product.name}" onerror="handleImageError(this)">
         <h2>${product.name}</h2>
         <div class="product-price">${parseFloat(product.price).toLocaleString('ru-RU')} ₽</div>
         ${product.description ? `<div class="product-description">${parseMarkdown(product.description)}</div>` : ''}
@@ -379,7 +388,7 @@ function showCart() {
         const itemEl = document.createElement('div');
         itemEl.className = 'cart-item';
         itemEl.innerHTML = `
-            <img class="cart-item-image" src="${imageUrl}" alt="${item.product.name}" onerror="this.src=''">
+            <img class="cart-item-image" src="${imageUrl}" alt="${item.product.name}" onerror="handleImageError(this)">
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.product.name}</div>
                 <div class="cart-item-price">${itemTotal.toLocaleString('ru-RU')} ₽</div>
