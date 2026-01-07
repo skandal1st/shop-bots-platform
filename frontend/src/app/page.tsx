@@ -10,7 +10,11 @@ import {
   BarChartOutlined,
   CheckCircleOutlined,
   ArrowRightOutlined,
-  StarFilled
+  StarFilled,
+  FileTextOutlined,
+  ToolOutlined,
+  CloudDownloadOutlined,
+  CustomerServiceOutlined
 } from '@ant-design/icons'
 
 const { Title, Paragraph, Text } = Typography
@@ -30,14 +34,14 @@ export default function LandingPage() {
       description: 'Каталог, корзина, оплата'
     },
     {
-      icon: <ThunderboltOutlined />,
-      title: 'За 15 минут',
-      description: 'Быстрый старт продаж'
+      icon: <CloudDownloadOutlined />,
+      title: 'Цифровые товары',
+      description: 'Файлы, курсы, контент'
     },
     {
-      icon: <SafetyOutlined />,
-      title: 'Безопасность',
-      description: 'Защита данных клиентов'
+      icon: <CustomerServiceOutlined />,
+      title: 'Продажа услуг',
+      description: 'Консультации, записи, бронирование'
     },
     {
       icon: <BarChartOutlined />,
@@ -45,9 +49,9 @@ export default function LandingPage() {
       description: 'Отслеживание продаж'
     },
     {
-      icon: <CheckCircleOutlined />,
-      title: 'Поддержка',
-      description: 'Помощь 24/7'
+      icon: <SafetyOutlined />,
+      title: 'Безопасность',
+      description: 'Защита данных клиентов'
     }
   ]
 
@@ -70,7 +74,7 @@ export default function LandingPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <RobotOutlined style={{ fontSize: 28, color: '#1890ff' }} />
-          <Text strong style={{ fontSize: 20, color: '#000' }}>Shop Bots</Text>
+          <Text strong style={{ fontSize: 20, color: '#000' }}>Sellio</Text>
         </div>
 
         <div style={{ display: 'flex', gap: 40, alignItems: 'center' }}>
@@ -155,7 +159,7 @@ export default function LandingPage() {
                 maxWidth: 500
               }}>
                 Создавайте Telegram-ботов для продаж без программирования.
-                Полный функционал интернет-магазина готов к запуску.
+                Физические товары, цифровые продукты и услуги — всё в одном месте.
               </Paragraph>
 
               <Space size="large" style={{ marginTop: 16 }}>
@@ -303,6 +307,100 @@ export default function LandingPage() {
               {brand}
             </Text>
           ))}
+        </div>
+      </section>
+
+      {/* Digital Products & Services Section */}
+      <section style={{
+        padding: '100px 48px',
+        background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)'
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <Row gutter={[64, 48]} align="middle">
+            <Col xs={24} lg={12}>
+              <Space direction="vertical" size={24}>
+                <div style={{
+                  display: 'inline-block',
+                  background: 'rgba(102, 126, 234, 0.15)',
+                  padding: '6px 16px',
+                  borderRadius: 20,
+                  color: '#667eea',
+                  fontSize: 14,
+                  fontWeight: 600
+                }}>
+                  Новые возможности
+                </div>
+                <Title level={2} style={{
+                  fontSize: 40,
+                  fontWeight: 800,
+                  lineHeight: 1.2,
+                  margin: 0
+                }}>
+                  Продавайте цифровые товары и услуги
+                </Title>
+                <Paragraph style={{
+                  fontSize: 18,
+                  color: '#666',
+                  lineHeight: 1.7
+                }}>
+                  Автоматическая доставка файлов после оплаты, запись на консультации,
+                  бронирование услуг — расширьте границы вашего бизнеса в Telegram.
+                </Paragraph>
+              </Space>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Row gutter={[24, 24]}>
+                <Col xs={12}>
+                  <Card style={{
+                    borderRadius: 16,
+                    border: 'none',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                    height: '100%'
+                  }}>
+                    <FileTextOutlined style={{ fontSize: 32, color: '#667eea', marginBottom: 12 }} />
+                    <Title level={5} style={{ marginBottom: 8 }}>Электронные книги</Title>
+                    <Text style={{ color: '#666' }}>PDF, EPUB и другие форматы</Text>
+                  </Card>
+                </Col>
+                <Col xs={12}>
+                  <Card style={{
+                    borderRadius: 16,
+                    border: 'none',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                    height: '100%'
+                  }}>
+                    <CloudDownloadOutlined style={{ fontSize: 32, color: '#52c41a', marginBottom: 12 }} />
+                    <Title level={5} style={{ marginBottom: 8 }}>Онлайн-курсы</Title>
+                    <Text style={{ color: '#666' }}>Видео, материалы, доступ</Text>
+                  </Card>
+                </Col>
+                <Col xs={12}>
+                  <Card style={{
+                    borderRadius: 16,
+                    border: 'none',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                    height: '100%'
+                  }}>
+                    <ToolOutlined style={{ fontSize: 32, color: '#fa8c16', marginBottom: 12 }} />
+                    <Title level={5} style={{ marginBottom: 8 }}>Шаблоны и ПО</Title>
+                    <Text style={{ color: '#666' }}>Лицензии, ключи, архивы</Text>
+                  </Card>
+                </Col>
+                <Col xs={12}>
+                  <Card style={{
+                    borderRadius: 16,
+                    border: 'none',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+                    height: '100%'
+                  }}>
+                    <CustomerServiceOutlined style={{ fontSize: 32, color: '#eb2f96', marginBottom: 12 }} />
+                    <Title level={5} style={{ marginBottom: 8 }}>Консультации</Title>
+                    <Text style={{ color: '#666' }}>Запись и бронирование</Text>
+                  </Card>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
         </div>
       </section>
 
@@ -497,11 +595,11 @@ export default function LandingPage() {
             <Col xs={24} md={12}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <RobotOutlined style={{ fontSize: 32, color: '#1890ff' }} />
-                <Text strong style={{ fontSize: 24, color: '#fff' }}>Shop Bots</Text>
+                <Text strong style={{ fontSize: 24, color: '#fff' }}>Sellio</Text>
               </div>
               <Paragraph style={{ color: '#999', fontSize: 16, maxWidth: 400 }}>
                 Конструктор Telegram-ботов для интернет-магазинов.
-                Создавайте, управляйте и развивайте свой бизнес.
+                Продавайте физические товары, цифровые продукты и услуги.
               </Paragraph>
             </Col>
             <Col xs={24} md={12}>
@@ -529,7 +627,7 @@ export default function LandingPage() {
             color: '#666'
           }}>
             <Text style={{ color: '#666' }}>
-              © 2025 Shop Bots Platform. Все права защищены.
+              © 2025 Sellio. Все права защищены.
             </Text>
           </div>
         </div>

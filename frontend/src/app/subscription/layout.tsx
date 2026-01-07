@@ -43,7 +43,7 @@ export default function SubscriptionLayout({
           padding: '0 24px',
           borderBottom: '1px solid #f0f0f0'
         }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>Shop Bots</h2>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>Sellio</h2>
         </div>
         <Navigation />
       </Sider>

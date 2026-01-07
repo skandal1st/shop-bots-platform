@@ -64,7 +64,7 @@ export default function DashboardPage() {
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <Title level={3} style={{ margin: 0 }}>Shop Bots Platform</Title>
+        <Title level={3} style={{ margin: 0 }}>Sellio</Title>
         <Button icon={<LogoutOutlined />} onClick={handleLogout}>
           Выйти
         </Button>

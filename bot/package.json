@@ -1,7 +1,7 @@
 {
-  "name": "shop-bots-telegram",
+  "name": "sellio-telegram",
   "version": "1.0.0",
-  "description": "Telegram Bot модуль для Shop Bots Platform",
+  "description": "Telegram Bot модуль для Sellio",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

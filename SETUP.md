@@ -27,7 +27,7 @@ cd ../bot && npm install
 1. Создайте базу данных PostgreSQL:
 
 ```sql
-CREATE DATABASE shop_bots;
+CREATE DATABASE sellio;
 ```
 
 2. Скопируйте файл `.env.example` в `.env` в папке `backend`:
@@ -40,7 +40,7 @@ cp .env.example .env
 3. Отредактируйте `backend/.env` и укажите ваши настройки:
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/shop_bots?schema=public"
+DATABASE_URL="postgresql://user:password@localhost:5432/sellio?schema=public"
 JWT_SECRET="your-super-secret-jwt-key"
 PORT=3001
 ```
@@ -123,7 +123,7 @@ npm run dev
 ## Структура проекта
 
 ```
-shop_bots/
+sellio/
 ├── backend/          # Backend API (Express + Prisma)
 │   ├── src/
 │   │   ├── routes/   # API маршруты

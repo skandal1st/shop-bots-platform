@@ -1,4 +1,4 @@
-# Структура проекта Shop Bots Platform
+# Структура проекта Sellio
 
 ## Обзор
 
@@ -10,7 +10,7 @@
 ## Структура директорий
 
 ```
-shop_bots/
+sellio/
 ├── backend/                    # Backend API
 │   ├── src/
 │   │   ├── index.ts           # Точка входа сервера

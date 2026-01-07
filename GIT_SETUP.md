@@ -10,13 +10,13 @@
 
 1. Создайте новый репозиторий на GitHub:
    - Перейдите на https://github.com/new
-   - Введите название репозитория (например: `shop-bots-platform`)
+   - Введите название репозитория (например: `sellio`)
    - **НЕ** создавайте README, .gitignore или лицензию (они уже есть)
    - Нажмите "Create repository"
 
 2. Подключите удаленный репозиторий:
    ```bash
-   git remote add origin https://github.com/ВАШ_USERNAME/shop-bots-platform.git
+   git remote add origin https://github.com/ВАШ_USERNAME/sellio.git
    ```
 
 3. Загрузите код:
@@ -31,7 +31,7 @@
 
 2. Подключите удаленный репозиторий:
    ```bash
-   git remote add origin https://gitlab.com/ВАШ_USERNAME/shop-bots-platform.git
+   git remote add origin https://gitlab.com/ВАШ_USERNAME/sellio.git
    ```
 
 3. Загрузите код:

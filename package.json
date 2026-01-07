@@ -1,7 +1,7 @@
 {
-  "name": "shop-bots-platform",
+  "name": "sellio",
   "version": "1.0.0",
-  "description": "Платформа для создания Telegram-ботов интернет-магазинов",
+  "description": "Sellio — платформа для создания Telegram-ботов интернет-магазинов",
   "private": true,
   "workspaces": [
     "backend",

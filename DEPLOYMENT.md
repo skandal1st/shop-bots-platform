@@ -1,4 +1,4 @@
-# Инструкция по развертыванию Shop Bots Platform
+# Инструкция по развертыванию Sellio
 
 ## Требования к серверу
 
@@ -70,8 +70,8 @@ sudo ufw enable
 
 ```bash
 cd ~
-git clone <URL_вашего_репозитория> shop-bots-platform
-cd shop-bots-platform
+git clone <URL_вашего_репозитория> sellio
+cd sellio
 ```
 
 ### 2.2 Настройка переменных окружения
@@ -80,10 +80,10 @@ cd shop-bots-platform
 
 ```bash
 # Database
-DATABASE_URL="postgresql://shopbots:shopbots123@postgres:5432/shop_bots"
-POSTGRES_USER=shopbots
-POSTGRES_PASSWORD=shopbots123
-POSTGRES_DB=shop_bots
+DATABASE_URL="postgresql://sellio:sellio123@postgres:5432/sellio"
+POSTGRES_USER=sellio
+POSTGRES_PASSWORD=sellio123
+POSTGRES_DB=sellio
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
@@ -123,10 +123,10 @@ NODE_ENV=production
 
 ### 2.3 Настройка nginx
 
-Отредактируйте файл `nginx/conf.d/shopbots.conf` и замените `yourdomain.com` на ваш домен:
+Отредактируйте файл `nginx/conf.d/sellio.conf` и замените `yourdomain.com` на ваш домен:
 
 ```bash
-sed -i 's/yourdomain.com/your-actual-domain.com/g' nginx/conf.d/shopbots.conf
+sed -i 's/yourdomain.com/your-actual-domain.com/g' nginx/conf.d/sellio.conf
 ```
 
 ## 3. Настройка SSL сертификатов
@@ -137,7 +137,7 @@ sed -i 's/yourdomain.com/your-actual-domain.com/g' nginx/conf.d/shopbots.conf
 
 ```bash
 # Создайте временный конфигурационный файл
-cat > nginx/conf.d/shopbots-temp.conf <<'EOF'
+cat > nginx/conf.d/sellio-temp.conf <<'EOF'
 server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
@@ -161,11 +161,11 @@ server {
 EOF
 
 # Замените yourdomain.com на ваш домен
-sed -i 's/yourdomain.com/your-actual-domain.com/g' nginx/conf.d/shopbots-temp.conf
+sed -i 's/yourdomain.com/your-actual-domain.com/g' nginx/conf.d/sellio-temp.conf
 
 # Переименуйте основной конфиг
-mv nginx/conf.d/shopbots.conf nginx/conf.d/shopbots.conf.ssl
-mv nginx/conf.d/shopbots-temp.conf nginx/conf.d/shopbots.conf
+mv nginx/conf.d/sellio.conf nginx/conf.d/sellio.conf.ssl
+mv nginx/conf.d/sellio-temp.conf nginx/conf.d/sellio.conf
 ```
 
 ### 3.2 Запуск без SSL
@@ -190,8 +190,8 @@ docker-compose run --rm certbot certonly --webroot \
   -d www.your-actual-domain.com
 
 # Восстановите основной конфиг с SSL
-mv nginx/conf.d/shopbots.conf nginx/conf.d/shopbots-temp.conf
-mv nginx/conf.d/shopbots.conf.ssl nginx/conf.d/shopbots.conf
+mv nginx/conf.d/sellio.conf nginx/conf.d/sellio-temp.conf
+mv nginx/conf.d/sellio.conf.ssl nginx/conf.d/sellio.conf
 
 # Запустите nginx снова
 docker-compose up -d nginx
@@ -311,10 +311,10 @@ docker-compose up -d
 
 ```bash
 # Создание бэкапа
-docker-compose exec postgres pg_dump -U shopbots shop_bots > backup_$(date +%Y%m%d_%H%M%S).sql
+docker-compose exec postgres pg_dump -U sellio sellio > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Восстановление из бэкапа
-docker-compose exec -T postgres psql -U shopbots shop_bots < backup_20240101_120000.sql
+docker-compose exec -T postgres psql -U sellio sellio < backup_20240101_120000.sql
 ```
 
 #### Загруженные файлы:
@@ -370,7 +370,7 @@ docker-compose run --rm certbot renew
 
 ```bash
 # Проверьте состояние PostgreSQL
-docker-compose exec postgres psql -U shopbots -c "SELECT version();"
+docker-compose exec postgres psql -U sellio -c "SELECT version();"
 
 # Проверьте подключение
 docker-compose exec backend npx prisma db push
