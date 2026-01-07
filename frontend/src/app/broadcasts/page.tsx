@@ -75,6 +75,8 @@ export default function BroadcastsPage() {
   const [audienceCount, setAudienceCount] = useState<number | null>(null)
   const [sending, setSending] = useState(false)
   const [form] = Form.useForm()
+  const audienceType = Form.useWatch(['audienceFilter', 'type'], form)
+  const needsDate = audienceType === 'registered_after' || audienceType === 'registered_before'
 
   useEffect(() => {
     checkAuth()
@@ -383,9 +385,6 @@ export default function BroadcastsPage() {
       </Layout>
     )
   }
-
-  const audienceType = Form.useWatch(['audienceFilter', 'type'], form)
-  const needsDate = audienceType === 'registered_after' || audienceType === 'registered_before'
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
