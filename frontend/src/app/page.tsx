@@ -75,8 +75,11 @@ export default function LandingPage() {
         gap: 12
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <RobotOutlined style={{ fontSize: 28, color: '#1890ff' }} />
-          <Text strong style={{ fontSize: 20, color: '#000', whiteSpace: 'nowrap' }}>Sellio</Text>
+          <img src="/logo-icon.svg" alt="Sellio" style={{ height: 32, width: 'auto' }} />
+          <Text strong style={{ fontSize: 20, whiteSpace: 'nowrap' }}>
+            <span style={{ color: '#1e3a5f' }}>sell</span>
+            <span style={{ color: '#ff6b35' }}>io</span>
+          </Text>
         </div>
 
         <div className="nav-links" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
@@ -617,8 +620,11 @@ export default function LandingPage() {
           <Row gutter={[48, 32]}>
             <Col xs={24} md={12}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <RobotOutlined style={{ fontSize: 32, color: '#1890ff' }} />
-                <Text strong style={{ fontSize: 24, color: '#fff' }}>Sellio</Text>
+                <img src="/logo-icon.svg" alt="Sellio" style={{ height: 40, width: 'auto' }} />
+                <Text strong style={{ fontSize: 24 }}>
+                  <span style={{ color: '#fff' }}>sell</span>
+                  <span style={{ color: '#ff6b35' }}>io</span>
+                </Text>
               </div>
               <Paragraph style={{ color: '#999', fontSize: 16, maxWidth: 400 }}>
                 Конструктор Telegram-ботов для интернет-магазинов.
