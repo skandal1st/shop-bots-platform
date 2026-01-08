@@ -64,26 +64,28 @@ export default function LandingPage() {
     }}>
       {/* Navigation */}
       <nav style={{
-        padding: '20px 48px',
+        padding: '16px 20px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         background: 'transparent',
         position: 'relative',
-        zIndex: 10
+        zIndex: 10,
+        flexWrap: 'wrap',
+        gap: 12
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <RobotOutlined style={{ fontSize: 28, color: '#1890ff' }} />
-          <Text strong style={{ fontSize: 20, color: '#000' }}>Sellio</Text>
+          <Text strong style={{ fontSize: 20, color: '#000', whiteSpace: 'nowrap' }}>Sellio</Text>
         </div>
 
-        <div style={{ display: 'flex', gap: 40, alignItems: 'center' }}>
+        <div className="nav-links" style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           <a href="#features" style={{ color: '#666', textDecoration: 'none', fontSize: 15 }}>Возможности</a>
           <a href="#pricing" style={{ color: '#666', textDecoration: 'none', fontSize: 15 }}>Тарифы</a>
           <a href="#footer" style={{ color: '#666', textDecoration: 'none', fontSize: 15 }}>Контакты</a>
         </div>
 
-        <Space size="middle">
+        <Space size="small" style={{ flexShrink: 0 }}>
           <Button
             type="text"
             onClick={() => router.push('/login')}
@@ -93,24 +95,44 @@ export default function LandingPage() {
           </Button>
           <Button
             type="primary"
-            size="large"
+            size="middle"
             onClick={() => router.push('/register')}
             style={{
               background: '#1890ff',
               border: 'none',
               borderRadius: 8,
-              fontWeight: 600,
-              height: 44,
-              padding: '0 24px'
+              fontWeight: 600
             }}
           >
-            Начать бесплатно
+            Начать
           </Button>
         </Space>
       </nav>
 
+      {/* Mobile styles */}
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .nav-links {
+            display: none !important;
+          }
+          .hero-section {
+            padding: 40px 20px 60px !important;
+          }
+          .hero-title {
+            font-size: 36px !important;
+          }
+          .section-padding {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+          }
+          .footer-section {
+            padding: 40px 20px 24px !important;
+          }
+        }
+      `}</style>
+
       {/* Hero Section */}
-      <section style={{
+      <section className="hero-section" style={{
         padding: '80px 48px 120px',
         maxWidth: 1400,
         margin: '0 auto'
@@ -132,6 +154,7 @@ export default function LandingPage() {
 
               <Title
                 level={1}
+                className="hero-title"
                 style={{
                   fontSize: 64,
                   fontWeight: 800,
@@ -281,7 +304,7 @@ export default function LandingPage() {
       </section>
 
       {/* Trusted By Section */}
-      <section style={{
+      <section className="section-padding" style={{
         padding: '40px 48px',
         textAlign: 'center',
         background: 'rgba(255, 255, 255, 0.5)',
@@ -311,7 +334,7 @@ export default function LandingPage() {
       </section>
 
       {/* Digital Products & Services Section */}
-      <section style={{
+      <section className="section-padding" style={{
         padding: '100px 48px',
         background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)'
       }}>
@@ -405,7 +428,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" style={{
+      <section id="features" className="section-padding" style={{
         padding: '100px 48px',
         background: '#fff'
       }}>
@@ -463,7 +486,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" style={{
+      <section id="pricing" className="section-padding" style={{
         padding: '100px 48px',
         background: 'linear-gradient(180deg, #fff 0%, #f5f5f5 100%)'
       }}>
@@ -585,7 +608,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer id="footer" style={{
+      <footer id="footer" className="footer-section" style={{
         background: '#000',
         color: '#fff',
         padding: '80px 48px 40px'
