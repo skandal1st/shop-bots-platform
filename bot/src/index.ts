@@ -16,6 +16,7 @@ class ShopBot {
   private bot: TelegramBot;
   private config: BotConfig;
   private userStates: Map<number, string> = new Map();
+  private userCategory: Map<number, string> = new Map(); // Track current category for back navigation
 
   constructor(config: BotConfig) {
     this.config = config;
@@ -85,10 +86,8 @@ class ShopBot {
           const page = parseInt(parts[2]) || 0;
           await this.showCategoryProducts(chatId, categoryId, page, messageId);
         } else if (data.startsWith('product_')) {
-          // Format: product_productId or product_productId_categoryId
-          const parts = data.replace('product_', '').split('_');
-          const productId = parts[0];
-          const categoryId = parts[1] || null;
+          const productId = data.replace('product_', '');
+          const categoryId = this.userCategory.get(chatId) || null;
           await this.showProduct(chatId, productId, categoryId);
         } else if (data.startsWith('add_to_cart_')) {
           const productId = data.replace('add_to_cart_', '');
@@ -255,6 +254,9 @@ class ShopBot {
   private async showCategoryProducts(chatId: number, categoryId: string, page: number = 0, messageId?: number) {
     const ITEMS_PER_PAGE = 8;
 
+    // Save current category for back navigation
+    this.userCategory.set(chatId, categoryId);
+
     try {
       // Get category info
       const catResponse = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/categories`);
@@ -286,12 +288,12 @@ class ShopBot {
         const row: any[] = [];
         row.push({
           text: products[i].name,
-          callback_data: `product_${products[i].id}_${categoryId}`
+          callback_data: `product_${products[i].id}`
         });
         if (products[i + 1]) {
           row.push({
             text: products[i + 1].name,
-            callback_data: `product_${products[i + 1].id}_${categoryId}`
+            callback_data: `product_${products[i + 1].id}`
           });
         }
         keyboard.push(row);
