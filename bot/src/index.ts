@@ -85,8 +85,11 @@ class ShopBot {
           const page = parseInt(parts[2]) || 0;
           await this.showCategoryProducts(chatId, categoryId, page, messageId);
         } else if (data.startsWith('product_')) {
-          const productId = data.replace('product_', '');
-          await this.showProduct(chatId, productId);
+          // Format: product_productId or product_productId_categoryId
+          const parts = data.replace('product_', '').split('_');
+          const productId = parts[0];
+          const categoryId = parts[1] || null;
+          await this.showProduct(chatId, productId, categoryId);
         } else if (data.startsWith('add_to_cart_')) {
           const productId = data.replace('add_to_cart_', '');
           await this.addToCart(chatId, productId);
@@ -283,12 +286,12 @@ class ShopBot {
         const row: any[] = [];
         row.push({
           text: products[i].name,
-          callback_data: `product_${products[i].id}`
+          callback_data: `product_${products[i].id}_${categoryId}`
         });
         if (products[i + 1]) {
           row.push({
             text: products[i + 1].name,
-            callback_data: `product_${products[i + 1].id}`
+            callback_data: `product_${products[i + 1].id}_${categoryId}`
           });
         }
         keyboard.push(row);
@@ -358,7 +361,7 @@ class ShopBot {
     }
   }
 
-  private async showProduct(chatId: number, productId: string) {
+  private async showProduct(chatId: number, productId: string, categoryId?: string | null) {
     try {
       const response = await axios.get(`${this.config.apiUrl}/api/public/products/${productId}`);
       const product = response.data?.data;
@@ -368,14 +371,28 @@ class ShopBot {
         return;
       }
 
-      const text = `*${product.name}*\n\n${product.description}\n\n💰 Цена: ${product.price} ₽`;
+      const description = product.description || '';
+      const text = `*${product.name}*\n\n${description}\n\n💰 Цена: ${product.price} ₽`;
 
-      const keyboard = [[
-        {
-          text: '🛒 Добавить в корзину',
+      const keyboard: any[][] = [
+        [{
+          text: '🛒 Заказать',
           callback_data: `add_to_cart_${productId}`
-        }
-      ]];
+        }]
+      ];
+
+      // Add back button if we know the category
+      if (categoryId) {
+        keyboard.push([{
+          text: '↩️ Назад к товарам',
+          callback_data: `category_${categoryId}`
+        }]);
+      } else {
+        keyboard.push([{
+          text: '↩️ К категориям',
+          callback_data: 'back_to_catalog'
+        }]);
+      }
 
       if (product.images && product.images.length > 0) {
         const imageUrl = this.getFullImageUrl(product.images[0].url);
