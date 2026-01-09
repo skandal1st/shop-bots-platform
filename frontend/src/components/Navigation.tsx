@@ -14,7 +14,8 @@ import {
   BarChartOutlined,
   TagsOutlined,
   ShoppingCartOutlined,
-  NotificationOutlined
+  NotificationOutlined,
+  FileTextOutlined
 } from '@ant-design/icons'
 import api from '@/lib/api'
 
@@ -76,6 +77,11 @@ export default function Navigation() {
       key: '/broadcasts',
       icon: <NotificationOutlined />,
       label: 'Рассылки'
+    },
+    {
+      key: '/text-blocks',
+      icon: <FileTextOutlined />,
+      label: 'Инфо-блоки'
     },
     {
       key: '/subscription',
