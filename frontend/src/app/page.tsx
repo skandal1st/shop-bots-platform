@@ -5,12 +5,10 @@ import { Button, Typography, Space, Row, Col, Card } from 'antd'
 import {
   RobotOutlined,
   ShoppingCartOutlined,
-  ThunderboltOutlined,
   SafetyOutlined,
   BarChartOutlined,
   CheckCircleOutlined,
   ArrowRightOutlined,
-  StarFilled,
   FileTextOutlined,
   ToolOutlined,
   CloudDownloadOutlined,
@@ -188,37 +186,25 @@ export default function LandingPage() {
                 Физические товары, цифровые продукты и услуги — всё в одном месте.
               </Paragraph>
 
-              <Space size="large" style={{ marginTop: 16 }}>
-                <Button
-                  type="primary"
-                  size="large"
-                  onClick={() => router.push('/register')}
-                  icon={<ArrowRightOutlined />}
-                  iconPosition="end"
-                  style={{
-                    background: '#000',
-                    border: 'none',
-                    borderRadius: 12,
-                    height: 56,
-                    fontSize: 16,
-                    fontWeight: 600,
-                    padding: '0 32px'
-                  }}
-                >
-                  Начать бесплатно
-                </Button>
-
-                <Space className="rating-block" style={{ color: '#666', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  <StarFilled style={{ color: '#faad14' }} />
-                  <StarFilled style={{ color: '#faad14' }} />
-                  <StarFilled style={{ color: '#faad14' }} />
-                  <StarFilled style={{ color: '#faad14' }} />
-                  <StarFilled style={{ color: '#faad14' }} />
-                  <Text style={{ marginLeft: 8, color: '#666', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                    4.9 из 5
-                  </Text>
-                </Space>
-              </Space>
+              <Button
+                type="primary"
+                size="large"
+                onClick={() => router.push('/register')}
+                icon={<ArrowRightOutlined />}
+                iconPosition="end"
+                style={{
+                  background: '#000',
+                  border: 'none',
+                  borderRadius: 12,
+                  height: 56,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  padding: '0 32px',
+                  marginTop: 16
+                }}
+              >
+                Начать бесплатно
+              </Button>
             </Space>
           </Col>
 
@@ -304,36 +290,6 @@ export default function LandingPage() {
             </div>
           </Col>
         </Row>
-      </section>
-
-      {/* Trusted By Section */}
-      <section className="section-padding" style={{
-        padding: '40px 48px',
-        textAlign: 'center',
-        background: 'rgba(255, 255, 255, 0.5)',
-        backdropFilter: 'blur(10px)'
-      }}>
-        <Text style={{ color: '#999', fontSize: 14, textTransform: 'uppercase', letterSpacing: 2 }}>
-          Нам доверяют
-        </Text>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 60,
-          marginTop: 24,
-          flexWrap: 'wrap'
-        }}>
-          {['Telegram', 'YooKassa', 'E-commerce', 'Retail', 'StartUp'].map((brand, i) => (
-            <Text key={i} style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#ccc',
-              opacity: 0.6
-            }}>
-              {brand}
-            </Text>
-          ))}
-        </div>
       </section>
 
       {/* Digital Products & Services Section */}
