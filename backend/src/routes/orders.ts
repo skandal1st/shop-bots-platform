@@ -3,6 +3,32 @@ import { prisma } from '../utils/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
+
+// Helper function to send Telegram notification to customer
+async function sendStatusNotificationToCustomer(
+  botToken: string,
+  customerTelegramId: bigint,
+  orderNumber: string,
+  statusName: string
+) {
+  try {
+    const message =
+      `📦 <b>Обновление статуса заказа</b>\n\n` +
+      `Заказ: <b>#${orderNumber}</b>\n` +
+      `Новый статус: <b>${statusName}</b>`;
+
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      chat_id: customerTelegramId.toString(),
+      text: message,
+      parse_mode: 'HTML'
+    });
+
+    console.log(`Status notification sent to customer ${customerTelegramId} for order ${orderNumber}`);
+  } catch (error: any) {
+    console.error('Error sending status notification:', error.response?.data || error.message);
+  }
+}
 
 export const orderRoutes = Router();
 
@@ -181,9 +207,20 @@ orderRoutes.put('/:id/status', async (req: AuthRequest, res, next) => {
             status: true
           },
           orderBy: { changedAt: 'desc' }
-        }
+        },
+        bot: true
       }
     });
+
+    // Send notification to customer about status change
+    if (result && result.bot.token && result.customer.telegramId) {
+      sendStatusNotificationToCustomer(
+        result.bot.token,
+        result.customer.telegramId,
+        result.orderNumber,
+        status.name
+      );
+    }
 
     // Convert BigInt to string for JSON serialization
     const resultData = {
@@ -191,6 +228,11 @@ orderRoutes.put('/:id/status', async (req: AuthRequest, res, next) => {
       customer: {
         ...result!.customer,
         telegramId: result!.customer.telegramId.toString()
+      },
+      bot: {
+        ...result!.bot,
+        adminTelegramId: result!.bot.adminTelegramId?.toString() || null,
+        token: undefined // Don't expose token in response
       }
     };
 

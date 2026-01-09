@@ -74,9 +74,9 @@ export default function LandingPage() {
         flexWrap: 'wrap',
         gap: 12
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <img src="/logo-icon.svg" alt="Sellio" style={{ height: 32, width: 'auto' }} />
-          <Text strong style={{ fontSize: 20, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <img src="/logo-icon.svg" alt="Sellio" style={{ height: 40, width: 'auto' }} />
+          <Text strong style={{ fontSize: 22, whiteSpace: 'nowrap' }}>
             <span style={{ color: '#1e3a5f' }}>sell</span>
             <span style={{ color: '#ff6b35' }}>io</span>
           </Text>
@@ -208,13 +208,13 @@ export default function LandingPage() {
                   Начать бесплатно
                 </Button>
 
-                <Space style={{ color: '#666' }}>
+                <Space className="rating-block" style={{ color: '#666', flexShrink: 0, whiteSpace: 'nowrap' }}>
                   <StarFilled style={{ color: '#faad14' }} />
                   <StarFilled style={{ color: '#faad14' }} />
                   <StarFilled style={{ color: '#faad14' }} />
                   <StarFilled style={{ color: '#faad14' }} />
                   <StarFilled style={{ color: '#faad14' }} />
-                  <Text style={{ marginLeft: 8, color: '#666', fontWeight: 500 }}>
+                  <Text style={{ marginLeft: 8, color: '#666', fontWeight: 500, whiteSpace: 'nowrap' }}>
                     4.9 из 5
                   </Text>
                 </Space>

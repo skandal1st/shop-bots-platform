@@ -152,6 +152,9 @@ async function loadCategories() {
 function renderCategories() {
     const allBtn = categoriesEl.querySelector('[data-category="all"]');
     categoriesEl.innerHTML = '';
+
+    // Add "All products" button with onclick handler
+    allBtn.onclick = () => selectCategory('all');
     categoriesEl.appendChild(allBtn);
 
     categories.forEach(category => {
@@ -192,19 +195,21 @@ async function loadProducts() {
 function renderProducts() {
     productsEl.innerHTML = '';
 
-    // Filter by category
-    let filteredProducts = selectedCategory === 'all'
-        ? products
-        : products.filter(p => p.categories.some(c => c.categoryId === selectedCategory));
+    let filteredProducts = products;
 
-    // Filter by search query
+    // If search query exists, search across ALL products (ignore category filter)
     if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        filteredProducts = filteredProducts.filter(p =>
+        filteredProducts = products.filter(p =>
             p.name.toLowerCase().includes(query) ||
             (p.description && p.description.toLowerCase().includes(query)) ||
             (p.article && p.article.toLowerCase().includes(query))
         );
+    } else {
+        // Filter by category only when not searching
+        filteredProducts = selectedCategory === 'all'
+            ? products
+            : products.filter(p => p.categories.some(c => c.categoryId === selectedCategory));
     }
 
     if (filteredProducts.length === 0) {

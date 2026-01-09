@@ -178,7 +178,15 @@ export default function OrdersPage() {
       title: '№ Заказа',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
-      render: (text: string) => <Text strong>{text}</Text>
+      render: (text: string, record: Order) => (
+        <Button
+          type="link"
+          style={{ padding: 0, fontWeight: 600 }}
+          onClick={() => handleViewOrder(record.id)}
+        >
+          {text}
+        </Button>
+      )
     },
     {
       title: 'Клиент',
