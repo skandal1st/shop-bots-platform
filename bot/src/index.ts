@@ -66,20 +66,32 @@ class ShopBot {
     // Callback queries
     this.bot.on('callback_query', async (query) => {
       const chatId = query.message?.chat.id;
+      const messageId = query.message?.message_id;
       const data = query.data;
 
       if (!chatId || !data) return;
 
       try {
-        if (data.startsWith('category_')) {
+        if (data === 'noop') {
+          // Do nothing - just a placeholder button
+          return;
+        } else if (data.startsWith('category_')) {
           const categoryId = data.replace('category_', '');
-          await this.showCategory(chatId, categoryId);
+          await this.showCategoryProducts(chatId, categoryId, 0, messageId);
+        } else if (data.startsWith('catpage_')) {
+          // Pagination: catpage_categoryId_page
+          const parts = data.split('_');
+          const categoryId = parts[1];
+          const page = parseInt(parts[2]) || 0;
+          await this.showCategoryProducts(chatId, categoryId, page, messageId);
         } else if (data.startsWith('product_')) {
           const productId = data.replace('product_', '');
           await this.showProduct(chatId, productId);
         } else if (data.startsWith('add_to_cart_')) {
           const productId = data.replace('add_to_cart_', '');
           await this.addToCart(chatId, productId);
+        } else if (data === 'back_to_catalog') {
+          await this.showCatalog(chatId);
         } else if (data.startsWith('cart_')) {
           await this.handleCartAction(chatId, data);
         } else if (data === 'checkout') {
@@ -237,24 +249,112 @@ class ShopBot {
     }
   }
 
-  private async showCategory(chatId: number, categoryId: string) {
+  private async showCategoryProducts(chatId: number, categoryId: string, page: number = 0, messageId?: number) {
+    const ITEMS_PER_PAGE = 8;
+
     try {
+      // Get category info
+      const catResponse = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/categories`);
+      const categories = catResponse.data?.data || [];
+      const category = categories.find((c: any) => c.id === categoryId);
+      const categoryName = category ? (category.emoji ? `${category.emoji} ${category.name}` : category.name) : 'Категория';
+
+      // Get products
       const response = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/products`, {
         params: { categoryId }
       });
-      const products = response.data?.data || [];
+      const allProducts = response.data?.data || [];
 
-      if (products.length === 0) {
+      if (allProducts.length === 0) {
         await this.bot.sendMessage(chatId, 'В этой категории пока нет товаров');
         return;
       }
 
-      // Show first product or list
-      for (const product of products.slice(0, 10)) {
-        await this.showProduct(chatId, product.id);
+      // Pagination
+      const totalPages = Math.ceil(allProducts.length / ITEMS_PER_PAGE);
+      const startIdx = page * ITEMS_PER_PAGE;
+      const products = allProducts.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+      // Build keyboard with product buttons
+      const keyboard: any[][] = [];
+
+      // Product buttons (2 per row for better readability)
+      for (let i = 0; i < products.length; i += 2) {
+        const row: any[] = [];
+        row.push({
+          text: products[i].name,
+          callback_data: `product_${products[i].id}`
+        });
+        if (products[i + 1]) {
+          row.push({
+            text: products[i + 1].name,
+            callback_data: `product_${products[i + 1].id}`
+          });
+        }
+        keyboard.push(row);
+      }
+
+      // Pagination buttons
+      if (totalPages > 1) {
+        const paginationRow: any[] = [];
+        if (page > 0) {
+          paginationRow.push({
+            text: '◀️ Назад',
+            callback_data: `catpage_${categoryId}_${page - 1}`
+          });
+        }
+        paginationRow.push({
+          text: `${page + 1}/${totalPages}`,
+          callback_data: 'noop'
+        });
+        if (page < totalPages - 1) {
+          paginationRow.push({
+            text: 'Вперёд ▶️',
+            callback_data: `catpage_${categoryId}_${page + 1}`
+          });
+        }
+        keyboard.push(paginationRow);
+      }
+
+      // Back to categories button
+      keyboard.push([{
+        text: '↩️ К категориям',
+        callback_data: 'back_to_catalog'
+      }]);
+
+      const text = `📦 *${categoryName}*\n\nВыберите товар:`;
+
+      // Edit existing message or send new one
+      if (messageId) {
+        try {
+          await this.bot.editMessageText(text, {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: keyboard
+            }
+          });
+        } catch (e) {
+          // If edit fails, send new message
+          await this.bot.sendMessage(chatId, text, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: keyboard
+            }
+          });
+        }
+      } else {
+        await this.bot.sendMessage(chatId, text, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: keyboard
+          }
+        });
       }
     } catch (error) {
-      console.error('Error showing category:', error);
+      console.error('Error showing category products:', error);
+      await this.bot.sendMessage(chatId, 'Ошибка загрузки товаров');
     }
   }
 
