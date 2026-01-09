@@ -247,6 +247,34 @@ botPublicRoutes.get('/bots/:botId/menu', async (req, res, next) => {
   }
 });
 
+// Get text blocks for bot
+botPublicRoutes.get('/bots/:botId/text-blocks', async (req, res, next) => {
+  try {
+    const { botId } = req.params;
+
+    const textBlocks = await prisma.botTextBlock.findMany({
+      where: {
+        botId,
+        isActive: true
+      },
+      orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        emoji: true,
+        content: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: textBlocks
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get categories for bot
 botPublicRoutes.get('/bots/:botId/categories', async (req, res, next) => {
   try {

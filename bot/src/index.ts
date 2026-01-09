@@ -12,11 +12,19 @@ interface BotConfig {
   apiUrl: string;
 }
 
+interface TextBlock {
+  id: string;
+  title: string;
+  emoji: string | null;
+  content: string;
+}
+
 class ShopBot {
   private bot: TelegramBot;
   private config: BotConfig;
   private userStates: Map<number, string> = new Map();
   private userCategory: Map<number, string> = new Map(); // Track current category for back navigation
+  private textBlocks: TextBlock[] = []; // Cached text blocks for menu buttons
 
   constructor(config: BotConfig) {
     this.config = config;
@@ -157,8 +165,31 @@ class ShopBot {
         await this.showOrders(chatId);
       } else if (text.includes('Поддержка') || text.includes('💬')) {
         await this.showSupport(chatId);
+      } else {
+        // Check if it's a text block button
+        const textBlock = await this.findTextBlockByButtonText(text);
+        if (textBlock) {
+          await this.bot.sendMessage(chatId, textBlock.content);
+        }
       }
     });
+  }
+
+  // Find text block by button text (matches "emoji title" or just "title")
+  private async findTextBlockByButtonText(text: string): Promise<TextBlock | null> {
+    // If text blocks not loaded yet, load them
+    if (this.textBlocks.length === 0) {
+      await this.loadTextBlocks();
+    }
+
+    // Find matching block
+    for (const block of this.textBlocks) {
+      const buttonText = block.emoji ? `${block.emoji} ${block.title}` : block.title;
+      if (text === buttonText || text === block.title) {
+        return block;
+      }
+    }
+    return null;
   }
 
   // Helper для преобразования относительных URL в абсолютные
@@ -168,6 +199,17 @@ class ShopBot {
       return url;
     }
     return `${this.config.apiUrl}${url}`;
+  }
+
+  private async loadTextBlocks(): Promise<TextBlock[]> {
+    try {
+      const response = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/text-blocks`);
+      this.textBlocks = response.data?.data || [];
+      return this.textBlocks;
+    } catch (error) {
+      console.error('Error loading text blocks:', error);
+      return [];
+    }
   }
 
   private async sendWelcomeMessage(chatId: number) {
@@ -182,6 +224,9 @@ class ShopBot {
       // Get menu buttons
       const menuResponse = await axios.get(`${this.config.apiUrl}/api/public/bots/${this.config.botId}/menu`);
       const menu = menuResponse.data?.data?.buttons || [];
+
+      // Load text blocks for menu
+      await this.loadTextBlocks();
 
       const keyboard = this.buildMenuKeyboard(menu, chatId);
 
@@ -203,6 +248,24 @@ class ShopBot {
         text: button.emoji ? `${button.emoji} ${button.text}` : button.text
       }))
     );
+
+    // Add text block buttons (2 per row)
+    if (this.textBlocks.length > 0) {
+      for (let i = 0; i < this.textBlocks.length; i += 2) {
+        const row: any[] = [];
+        const block1 = this.textBlocks[i];
+        row.push({
+          text: block1.emoji ? `${block1.emoji} ${block1.title}` : block1.title
+        });
+        if (this.textBlocks[i + 1]) {
+          const block2 = this.textBlocks[i + 1];
+          row.push({
+            text: block2.emoji ? `${block2.emoji} ${block2.title}` : block2.title
+          });
+        }
+        keyboard.push(row);
+      }
+    }
 
     // Add Mini App button with user data
     const miniAppUrl = chatId

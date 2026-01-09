@@ -51,7 +51,8 @@ model Bot {
   notificationSettings NotificationSettings?
   broadcasts        Broadcast[]
   supportTickets    SupportTicket[]
-  
+  textBlocks        BotTextBlock[]
+
   @@map("bots")
 }
 
@@ -357,10 +358,26 @@ model BotMenu {
   botId     String   @id @map("bot_id")
   buttons   Json     @default("[]")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   bot       Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  
+
   @@map("bot_menu")
+}
+
+model BotTextBlock {
+  id        String   @id @default(uuid())
+  botId     String   @map("bot_id")
+  title     String   // Название кнопки в меню (например "Адрес магазина")
+  emoji     String?  // Эмодзи для кнопки
+  content   String   @db.Text // Текст блока
+  isActive  Boolean  @default(true) @map("is_active")
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  bot       Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+
+  @@map("bot_text_blocks")
 }
 
 model PaymentSettings {
