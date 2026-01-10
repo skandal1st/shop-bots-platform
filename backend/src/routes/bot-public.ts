@@ -742,7 +742,7 @@ botPublicRoutes.post('/orders/bots/:botId', async (req, res, next) => {
       data: { lastOrderAt: new Date() }
     });
 
-    // Get bot and customer data for notification
+    // Get bot data for notification
     const bot = await prisma.bot.findUnique({
       where: { id: botId },
       select: {
@@ -751,11 +751,8 @@ botPublicRoutes.post('/orders/bots/:botId', async (req, res, next) => {
       }
     });
 
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId }
-    });
-
     // Send notification to admin (async, don't wait)
+    // customer is already fetched above for validation
     if (bot && customer) {
       sendAdminNotification(bot, order, customer, items).catch(err =>
         console.error('Failed to send admin notification:', err)
