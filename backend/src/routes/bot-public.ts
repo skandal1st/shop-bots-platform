@@ -679,6 +679,15 @@ botPublicRoutes.post('/orders/bots/:botId', async (req, res, next) => {
       throw new AppError('customerId and items are required', 400);
     }
 
+    // Verify customer belongs to this bot
+    const customer = await prisma.customer.findFirst({
+      where: { id: customerId, botId }
+    });
+
+    if (!customer) {
+      throw new AppError('Customer not found for this bot', 404);
+    }
+
     // Get default status
     const defaultStatus = await prisma.orderStatus.findFirst({
       where: {

@@ -15,13 +15,18 @@ customerRoutes.post('/bots/:botId/telegram', async (req, res, next) => {
       throw new AppError('telegramId and firstName are required', 400);
     }
 
-    // Find existing customer by telegramId
+    // Find existing customer by botId + telegramId (composite unique)
     let customer = await prisma.customer.findUnique({
-      where: { telegramId: BigInt(telegramId) }
+      where: {
+        botId_telegramId: {
+          botId,
+          telegramId: BigInt(telegramId)
+        }
+      }
     });
 
     if (!customer) {
-      // Create new customer
+      // Create new customer for this bot
       customer = await prisma.customer.create({
         data: {
           botId,
@@ -225,4 +230,3 @@ customerRoutes.get('/:id', async (req: AuthRequest, res, next) => {
     next(error);
   }
 });
-

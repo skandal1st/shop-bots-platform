@@ -65,12 +65,12 @@ model Category {
   order     Int       @default(0)
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")
-  
+
   bot         Bot          @relation(fields: [botId], references: [id], onDelete: Cascade)
   parent      Category?    @relation("CategoryTree", fields: [parentId], references: [id])
   children    Category[]   @relation("CategoryTree")
   products    ProductCategory[]
-  
+
   @@map("categories")
 }
 
@@ -170,19 +170,19 @@ model ProductImage {
   productId String   @map("product_id")
   url       String
   order     Int      @default(0)
-  
+
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+
   @@map("product_images")
 }
 
 model ProductCategory {
   productId  String   @map("product_id")
   categoryId String   @map("category_id")
-  
+
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
+
   @@id([productId, categoryId])
   @@map("product_categories")
 }
@@ -190,14 +190,14 @@ model ProductCategory {
 model Customer {
   id          String    @id @default(uuid())
   botId       String    @map("bot_id")
-  telegramId  BigInt    @unique @map("telegram_id")
+  telegramId  BigInt    @map("telegram_id")
   username    String?
   firstName   String    @map("first_name")
   lastName    String?   @map("last_name")
   phone       String?
   createdAt   DateTime  @default(now()) @map("created_at")
   lastOrderAt DateTime? @map("last_order_at")
-  
+
   bot              Bot               @relation(fields: [botId], references: [id], onDelete: Cascade)
   addresses        Address[]
   orders           Order[]
@@ -208,6 +208,7 @@ model Customer {
   supportTickets   SupportTicket[]
   digitalPurchases DigitalPurchase[]
 
+  @@unique([botId, telegramId])
   @@map("customers")
 }
 
@@ -216,9 +217,9 @@ model Address {
   customerId  String   @map("customer_id")
   addressText String   @map("address_text")
   isDefault   Boolean  @default(false) @map("is_default")
-  
+
   customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  
+
   @@map("addresses")
 }
 
@@ -230,11 +231,11 @@ model OrderStatus {
   order         Int      @default(0)
   isDefault     Boolean  @default(false) @map("is_default")
   notifyCustomer Boolean @default(true) @map("notify_customer")
-  
+
   bot           Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
   orders        Order[]
   statusHistory StatusHistory[]
-  
+
   @@map("order_statuses")
 }
 
@@ -251,7 +252,7 @@ model Order {
   adminNotes      String?   @map("admin_notes")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-  
+
   bot              Bot              @relation(fields: [botId], references: [id], onDelete: Cascade)
   customer         Customer         @relation(fields: [customerId], references: [id])
   status           OrderStatus      @relation(fields: [statusId], references: [id])
@@ -283,10 +284,10 @@ model StatusHistory {
   statusId  String   @map("status_id")
   changedAt DateTime @default(now()) @map("changed_at")
   changedBy String?  @map("changed_by")
-  
+
   order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   status    OrderStatus @relation(fields: [statusId], references: [id])
-  
+
   @@map("status_history")
 }
 
@@ -294,11 +295,11 @@ model Cart {
   customerId String   @id @map("customer_id")
   botId      String   @map("bot_id")
   updatedAt  DateTime @updatedAt @map("updated_at")
-  
+
   bot        Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
   customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items      CartItem[]
-  
+
   @@map("carts")
 }
 
@@ -307,10 +308,10 @@ model CartItem {
   customerId String   @map("customer_id")
   productId  String   @map("product_id")
   quantity   Int
-  
+
   cart       Cart     @relation(fields: [customerId], references: [customerId], onDelete: Cascade)
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+
   @@unique([customerId, productId])
   @@map("cart_items")
 }
@@ -335,9 +336,9 @@ model MessageTemplate {
   key       String
   text      String
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   bot       Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  
+
   @@unique([botId, key])
   @@map("message_templates")
 }
@@ -348,9 +349,9 @@ model BrandSettings {
   logoUrl    String?  @map("logo_url")
   description String  @default("")
   contacts   Json     @default("{}")
-  
+
   bot        Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  
+
   @@map("brand_settings")
 }
 
@@ -388,9 +389,9 @@ model PaymentSettings {
   testMode   Boolean  @default(true) @map("test_mode")
   currency   String   @default("RUB")
   enabled    Boolean  @default(false)
-  
+
   bot        Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  
+
   @@map("payment_settings")
 }
 
@@ -399,9 +400,9 @@ model NotificationSettings {
   telegramIds    Json     @default("[]") @map("telegram_ids")
   email          Json?    @default("{}")
   notifications  Json     @default("{}")
-  
+
   bot            Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  
+
   @@map("notification_settings")
 }
 
@@ -417,9 +418,9 @@ model Broadcast {
   sentAt        DateTime? @map("sent_at")
   stats         Json     @default("{\"total\":0,\"sent\":0,\"failed\":0}")
   createdAt     DateTime @default(now()) @map("created_at")
-  
+
   bot           Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  
+
   @@map("broadcasts")
 }
 
@@ -432,11 +433,11 @@ model SupportTicket {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   closedAt    DateTime? @map("closed_at")
-  
+
   bot         Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
   customer    Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   messages    SupportMessage[]
-  
+
   @@map("support_tickets")
 }
 
@@ -448,9 +449,9 @@ model SupportMessage {
   text        String
   attachments Json?    @default("[]")
   sentAt      DateTime @default(now()) @map("sent_at")
-  
+
   ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  
+
   @@map("support_messages")
 }
 
@@ -531,4 +532,3 @@ model Payment {
   @@index([yookassaPaymentId])
   @@map("payments")
 }
-

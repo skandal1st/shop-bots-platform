@@ -213,13 +213,13 @@ orderRoutes.put('/:id/status', async (req: AuthRequest, res, next) => {
     });
 
     // Send notification to customer about status change
-    if (result && result.bot.token && result.customer.telegramId) {
+    if (result && result.bot.token && result.customer?.telegramId) {
       sendStatusNotificationToCustomer(
         result.bot.token,
         result.customer.telegramId,
         result.orderNumber,
         status.name
-      );
+      ).catch(err => console.error('Failed to send status notification:', err));
     }
 
     // Convert BigInt to string for JSON serialization
@@ -317,4 +317,3 @@ orderRoutes.post('/bots/:botId', async (req: AuthRequest, res, next) => {
     next(error);
   }
 });
-
