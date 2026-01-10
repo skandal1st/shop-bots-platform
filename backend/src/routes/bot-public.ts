@@ -705,9 +705,10 @@ botPublicRoutes.post('/orders/bots/:botId', async (req, res, next) => {
       return sum + (item.price * item.quantity);
     }, 0);
 
-    // Generate order number
-    const orderCount = await prisma.order.count({ where: { botId } });
-    const orderNumber = `ORD-${String(orderCount + 1).padStart(6, '0')}`;
+    // Generate unique order number (global count + timestamp for uniqueness)
+    const orderCount = await prisma.order.count();
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const orderNumber = `ORD-${String(orderCount + 1).padStart(6, '0')}-${timestamp}`;
 
     // Create order
     const order = await prisma.order.create({
