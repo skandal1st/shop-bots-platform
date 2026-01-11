@@ -558,7 +558,12 @@ class ShopBot {
         return;
       }
 
-      this.userStates.set(chatId, 'checkout_phone');
+      // Check if cart has physical products (need delivery address and allow cash payment)
+      const hasPhysicalProducts = cart.items.some(
+        (item: any) => item.product.productType === 'PHYSICAL'
+      );
+
+      this.userStates.set(chatId, `checkout_phone:${hasPhysicalProducts ? 'physical' : 'digital'}`);
       await this.bot.sendMessage(chatId, '📱 Введите ваш номер телефона:');
     } catch (error) {
       console.error('Error starting checkout:', error);
@@ -570,14 +575,34 @@ class ShopBot {
     try {
       const customer = await this.getOrCreateCustomer(chatId);
 
-      if (state === 'checkout_phone') {
-        // Save phone and ask for address
-        this.userStates.set(chatId, `checkout_address:${text}`);
-        await this.bot.sendMessage(chatId, '📍 Введите адрес доставки:');
-      } else if (state.startsWith('checkout_address:')) {
-        const phone = state.split(':')[1];
-        this.userStates.set(chatId, `checkout_payment:${phone}:${text}`);
+      if (state.startsWith('checkout_phone:')) {
+        // checkout_phone:physical or checkout_phone:digital
+        const cartType = state.split(':')[1]; // 'physical' or 'digital'
+        const phone = text;
 
+        if (cartType === 'physical') {
+          // Physical products - ask for delivery address
+          this.userStates.set(chatId, `checkout_address:${phone}:physical`);
+          await this.bot.sendMessage(chatId, '📍 Введите адрес доставки:');
+        } else {
+          // Digital/Service products - skip address, go to payment (only bank transfer)
+          this.userStates.set(chatId, `checkout_payment:${phone}::digital`);
+          await this.bot.sendMessage(chatId, '💳 Способ оплаты:', {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: 'Банковский перевод', callback_data: 'payment_bank' }]
+              ]
+            }
+          });
+        }
+      } else if (state.startsWith('checkout_address:')) {
+        // checkout_address:phone:cartType
+        const parts = state.split(':');
+        const phone = parts[1];
+        const address = text;
+        this.userStates.set(chatId, `checkout_payment:${phone}:${address}:physical`);
+
+        // Physical products - offer both payment methods
         await this.bot.sendMessage(chatId, '💳 Выберите способ оплаты:', {
           reply_markup: {
             inline_keyboard: [
@@ -604,7 +629,13 @@ class ShopBot {
         return;
       }
 
-      const [, phone, address] = state.split(':');
+      // State format: checkout_payment:phone:address:cartType
+      // For digital: checkout_payment:phone::digital (empty address)
+      const parts = state.split(':');
+      const phone = parts[1];
+      const address = parts[2] || ''; // Empty for digital/service
+      const cartType = parts[3]; // 'physical' or 'digital'
+
       const customer = await this.getOrCreateCustomer(chatId);
 
       // Update customer phone if provided
@@ -666,18 +697,27 @@ class ShopBot {
       await axios.delete(`${this.config.apiUrl}/api/public/carts/${customer.id}`);
 
       // Send confirmation to customer
-      await this.bot.sendMessage(
-        chatId,
+      let confirmationMessage =
         `✅ Заказ #${order.orderNumber} успешно оформлен!\n\n` +
         `📦 Товаров: ${items.reduce((sum: number, item: any) => sum + item.quantity, 0)}\n` +
-        `💰 Сумма: ${order.total} ₽\n` +
-        `📍 Адрес: ${address}\n` +
-        `💳 Оплата: ${paymentMethod}\n\n` +
-        `Мы свяжемся с вами в ближайшее время!`
-      );
+        `💰 Сумма: ${order.total} ₽\n`;
+
+      if (cartType === 'physical' && address) {
+        confirmationMessage += `📍 Адрес: ${address}\n`;
+      }
+
+      confirmationMessage += `💳 Оплата: ${paymentMethod}\n\n`;
+
+      if (cartType === 'digital') {
+        confirmationMessage += `После подтверждения оплаты вы получите свой заказ.`;
+      } else {
+        confirmationMessage += `Мы свяжемся с вами в ближайшее время!`;
+      }
+
+      await this.bot.sendMessage(chatId, confirmationMessage);
 
       // Send notification to admin
-      await this.sendAdminNotification(order, customer, itemsWithDetails, phone, address, paymentMethod);
+      await this.sendAdminNotification(order, customer, itemsWithDetails, phone, address, paymentMethod, cartType);
 
       this.userStates.delete(chatId);
     } catch (error: any) {
@@ -693,7 +733,8 @@ class ShopBot {
     items: any[],
     phone: string,
     address: string,
-    paymentMethod: string
+    paymentMethod: string,
+    cartType: string
   ) {
     try {
       // Get bot settings to retrieve adminTelegramId
@@ -713,13 +754,18 @@ class ShopBot {
       }
 
       // Build admin notification message using HTML
-      const adminMessage =
+      let adminMessage =
         `🔔 <b>Новый заказ #${order.orderNumber}</b>\n\n` +
         `👤 <b>Покупатель:</b>\n` +
         `<a href="tg://user?id=${customer.telegramId}">${customer.firstName}${customer.lastName ? ' ' + customer.lastName : ''}</a>\n` +
         `Username: ${customer.username ? '@' + customer.username : 'не указан'}\n\n` +
-        `📦 <b>Товары:</b>\n${productList}\n` +
-        `📍 <b>Адрес доставки:</b> ${address}\n` +
+        `📦 <b>Товары:</b>\n${productList}\n`;
+
+      if (cartType === 'physical' && address) {
+        adminMessage += `📍 <b>Адрес доставки:</b> ${address}\n`;
+      }
+
+      adminMessage +=
         `📱 <b>Телефон:</b> ${phone}\n` +
         `💳 <b>Способ оплаты:</b> ${paymentMethod}\n\n` +
         `💰 <b>Итого:</b> ${order.total} ₽`;
@@ -1034,4 +1080,3 @@ manager.startPeriodicCheck().catch((error) => {
 
 console.log('🤖 Multi-Bot Manager started');
 console.log(`📡 API URL: ${API_URL}\n`);
-
