@@ -760,51 +760,12 @@ botPublicRoutes.post('/orders/bots/:botId', async (req, res, next) => {
       );
     }
 
-    // Handle digital content delivery
-    const digitalDeliveryResults = await deliverDigitalContent(
-      order.id,
-      customerId,
-      items.map((item: any) => ({ productId: item.productId, quantity: item.quantity }))
-    );
-
-    // Send digital content to customer via Telegram
-    if (bot && customer && digitalDeliveryResults.length > 0) {
-      for (const delivery of digitalDeliveryResults) {
-        if (delivery.delivered) {
-          const product = items.find((i: any) => i.productId === delivery.productId);
-          let message = `📦 <b>Ваш заказ #${order.orderNumber}</b>\n\n`;
-          message += `<b>${product?.productName || 'Цифровой товар'}</b>\n\n`;
-
-          if (delivery.key) {
-            message += `🔑 <b>Ваш ключ:</b>\n<code>${delivery.key}</code>\n\n`;
-            message += `<i>Скопируйте ключ, нажав на него</i>`;
-          } else if (delivery.downloadUrl) {
-            const fullUrl = `${process.env.PUBLIC_URL || 'https://skandata.ru'}${delivery.downloadUrl}`;
-            message += `📥 <b>Ссылка для скачивания:</b>\n${fullUrl}`;
-          }
-
-          try {
-            await axios.post(
-              `https://api.telegram.org/bot${bot.token}/sendMessage`,
-              {
-                chat_id: customer.telegramId.toString(),
-                text: message,
-                parse_mode: 'HTML'
-              }
-            );
-          } catch (err) {
-            console.error('Failed to send digital content to customer:', err);
-          }
-        }
-      }
-    }
+    // Digital content delivery is handled when order status changes to "paid"
+    // See orders.ts for status change handling
 
     res.json({
       success: true,
-      data: {
-        ...order,
-        digitalDelivery: digitalDeliveryResults
-      }
+      data: order
     });
   } catch (error) {
     next(error);

@@ -4,6 +4,7 @@ import { AppError } from '../middleware/errorHandler';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import { deliverDigitalContent } from './digital';
 
 // Helper function to send Telegram notification to customer
 async function sendStatusNotificationToCustomer(
@@ -27,6 +28,62 @@ async function sendStatusNotificationToCustomer(
     console.log(`Status notification sent to customer ${customerTelegramId} for order ${orderNumber}`);
   } catch (error: any) {
     console.error('Error sending status notification:', error.response?.data || error.message);
+  }
+}
+
+// Check if status triggers digital delivery (contains "оплачен" or "paid")
+function statusTriggersDigitalDelivery(statusName: string): boolean {
+  const lowerName = statusName.toLowerCase();
+  return lowerName.includes('оплачен') || lowerName.includes('paid');
+}
+
+// Helper function to deliver digital content and send to customer
+async function handleDigitalDelivery(
+  order: any,
+  botToken: string,
+  customerTelegramId: bigint
+) {
+  try {
+    const items = order.items.map((item: any) => ({
+      productId: item.productId,
+      quantity: item.quantity
+    }));
+
+    const digitalDeliveryResults = await deliverDigitalContent(
+      order.id,
+      order.customerId,
+      items
+    );
+
+    // Send digital content to customer via Telegram
+    for (const delivery of digitalDeliveryResults) {
+      if (delivery.delivered) {
+        const orderItem = order.items.find((i: any) => i.productId === delivery.productId);
+        let message = `📦 <b>Ваш заказ #${order.orderNumber}</b>\n\n`;
+        message += `<b>${orderItem?.productName || 'Цифровой товар'}</b>\n\n`;
+
+        if (delivery.key) {
+          message += `🔑 <b>Ваш ключ:</b>\n<code>${delivery.key}</code>\n\n`;
+          message += `<i>Скопируйте ключ, нажав на него</i>`;
+        } else if (delivery.downloadUrl) {
+          const fullUrl = `${process.env.PUBLIC_URL || 'https://skandata.ru'}${delivery.downloadUrl}`;
+          message += `📥 <b>Ссылка для скачивания:</b>\n${fullUrl}`;
+        }
+
+        await axios.post(
+          `https://api.telegram.org/bot${botToken}/sendMessage`,
+          {
+            chat_id: customerTelegramId.toString(),
+            text: message,
+            parse_mode: 'HTML'
+          }
+        );
+      }
+    }
+
+    console.log(`Digital content delivered for order ${order.orderNumber}`);
+  } catch (error: any) {
+    console.error('Error delivering digital content:', error.message);
   }
 }
 
@@ -220,6 +277,15 @@ orderRoutes.put('/:id/status', async (req: AuthRequest, res, next) => {
         result.orderNumber,
         status.name
       ).catch(err => console.error('Failed to send status notification:', err));
+
+      // Deliver digital content if status triggers it (e.g., "Оплачен", "Paid")
+      if (statusTriggersDigitalDelivery(status.name)) {
+        handleDigitalDelivery(
+          result,
+          result.bot.token,
+          result.customer.telegramId
+        ).catch(err => console.error('Failed to deliver digital content:', err));
+      }
     }
 
     // Convert BigInt to string for JSON serialization
