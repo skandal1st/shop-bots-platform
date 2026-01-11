@@ -112,6 +112,9 @@ class ShopBot {
         } else if (data.startsWith('support_reply_')) {
           const ticketId = data.replace('support_reply_', '');
           await this.startSupportReply(chatId, ticketId);
+        } else if (data.startsWith('confirm_payment_')) {
+          const orderId = data.replace('confirm_payment_', '');
+          await this.confirmPayment(chatId, orderId, query.message?.message_id);
         }
       } catch (error) {
         console.error('Error handling callback:', error);
@@ -770,14 +773,62 @@ class ShopBot {
         `💳 <b>Способ оплаты:</b> ${paymentMethod}\n\n` +
         `💰 <b>Итого:</b> ${order.total} ₽`;
 
+      // Build inline keyboard - add confirm payment button for non-cash payments
+      const keyboard: any[][] = [];
+      if (paymentMethod !== 'Наличные при получении') {
+        keyboard.push([{
+          text: '✅ Подтвердить оплату',
+          callback_data: `confirm_payment_${order.id}`
+        }]);
+      }
+
       // Send notification to admin
       await this.bot.sendMessage(bot.adminTelegramId, adminMessage, {
-        parse_mode: 'HTML'
+        parse_mode: 'HTML',
+        reply_markup: keyboard.length > 0 ? { inline_keyboard: keyboard } : undefined
       });
 
       console.log(`Admin notification sent for order ${order.orderNumber}`);
     } catch (error: any) {
       console.error('Error sending admin notification:', error.response?.data || error.message);
+    }
+  }
+
+  private async confirmPayment(chatId: number, orderId: string, messageId?: number) {
+    try {
+      // Call API to confirm payment
+      const response = await axios.post(
+        `${this.config.apiUrl}/api/public/orders/${orderId}/confirm-payment`,
+        { botId: this.config.botId }
+      );
+
+      const result = response.data?.data;
+
+      if (result?.success) {
+        // Update the admin message to show payment confirmed
+        if (messageId) {
+          try {
+            await this.bot.editMessageReplyMarkup(
+              { inline_keyboard: [[{ text: '✅ Оплата подтверждена', callback_data: 'noop' }]] },
+              { chat_id: chatId, message_id: messageId }
+            );
+          } catch (e) {
+            // Message might be too old to edit
+          }
+        }
+
+        await this.bot.sendMessage(
+          chatId,
+          `✅ Оплата заказа #${result.orderNumber} подтверждена!\n\n` +
+          (result.digitalDelivered ? '📦 Цифровой товар отправлен покупателю.' : '')
+        );
+      } else {
+        await this.bot.sendMessage(chatId, '❌ Ошибка подтверждения оплаты');
+      }
+    } catch (error: any) {
+      console.error('Error confirming payment:', error);
+      const errorMessage = error.response?.data?.message || error.message;
+      await this.bot.sendMessage(chatId, `❌ Ошибка: ${errorMessage}`);
     }
   }
 

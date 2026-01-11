@@ -771,3 +771,143 @@ botPublicRoutes.post('/orders/bots/:botId', async (req, res, next) => {
     next(error);
   }
 });
+
+// Confirm payment (for admin via bot)
+botPublicRoutes.post('/orders/:orderId/confirm-payment', async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const { botId } = req.body;
+
+    // Get order with items
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        customer: true,
+        bot: true,
+        status: true
+      }
+    });
+
+    if (!order) {
+      throw new AppError('Order not found', 404);
+    }
+
+    if (order.botId !== botId) {
+      throw new AppError('Order does not belong to this bot', 403);
+    }
+
+    // Find "Оплачен" status for this bot
+    let paidStatus = await prisma.orderStatus.findFirst({
+      where: {
+        botId: order.botId,
+        name: { contains: 'плачен', mode: 'insensitive' }
+      }
+    });
+
+    // If no "Оплачен" status exists, create one
+    if (!paidStatus) {
+      const maxOrder = await prisma.orderStatus.aggregate({
+        where: { botId: order.botId },
+        _max: { order: true }
+      });
+
+      paidStatus = await prisma.orderStatus.create({
+        data: {
+          botId: order.botId,
+          name: 'Оплачен',
+          color: '#52c41a',
+          order: (maxOrder._max.order || 0) + 1
+        }
+      });
+    }
+
+    // Update order status
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { statusId: paidStatus.id }
+    });
+
+    // Add to status history
+    await prisma.statusHistory.create({
+      data: {
+        orderId,
+        statusId: paidStatus.id,
+        changedBy: 'admin_bot'
+      }
+    });
+
+    // Deliver digital content
+    const items = order.items.map((item: any) => ({
+      productId: item.productId,
+      quantity: item.quantity
+    }));
+
+    const digitalDeliveryResults = await deliverDigitalContent(
+      order.id,
+      order.customerId,
+      items
+    );
+
+    // Send digital content to customer via Telegram
+    let digitalDelivered = false;
+    if (order.bot.token && order.customer && digitalDeliveryResults.length > 0) {
+      for (const delivery of digitalDeliveryResults) {
+        if (delivery.delivered) {
+          digitalDelivered = true;
+          const orderItem = order.items.find((i: any) => i.productId === delivery.productId);
+          let message = `📦 <b>Ваш заказ #${order.orderNumber}</b>\n\n`;
+          message += `<b>${orderItem?.productName || 'Цифровой товар'}</b>\n\n`;
+
+          if (delivery.key) {
+            message += `🔑 <b>Ваш ключ:</b>\n<code>${delivery.key}</code>\n\n`;
+            message += `<i>Скопируйте ключ, нажав на него</i>`;
+          } else if (delivery.downloadUrl) {
+            const fullUrl = `${process.env.PUBLIC_URL || 'https://skandata.ru'}${delivery.downloadUrl}`;
+            message += `📥 <b>Ссылка для скачивания:</b>\n${fullUrl}`;
+          }
+
+          try {
+            await axios.post(
+              `https://api.telegram.org/bot${order.bot.token}/sendMessage`,
+              {
+                chat_id: order.customer.telegramId.toString(),
+                text: message,
+                parse_mode: 'HTML'
+              }
+            );
+          } catch (err) {
+            console.error('Failed to send digital content to customer:', err);
+          }
+        }
+      }
+    }
+
+    // Send status update notification to customer
+    if (order.bot.token && order.customer) {
+      try {
+        await axios.post(
+          `https://api.telegram.org/bot${order.bot.token}/sendMessage`,
+          {
+            chat_id: order.customer.telegramId.toString(),
+            text: `✅ <b>Оплата подтверждена!</b>\n\nЗаказ: <b>#${order.orderNumber}</b>\nНовый статус: <b>${paidStatus.name}</b>`,
+            parse_mode: 'HTML'
+          }
+        );
+      } catch (err) {
+        console.error('Failed to send status notification:', err);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        success: true,
+        orderNumber: order.orderNumber,
+        digitalDelivered
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
